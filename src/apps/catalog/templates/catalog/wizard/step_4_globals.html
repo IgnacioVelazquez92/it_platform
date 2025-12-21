@@ -1,0 +1,439 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1100px;">
+  {% include "catalog/wizard/_progress.html" with step=4 total_steps=5 progress_percent=80 request_obj=request_obj %}
+
+  <div class="mb-3">
+    <h3 class="mb-1">Permisos globales</h3>
+    <div class="text-muted small">
+      Definí Acciones, Matriz y Medios de pago. Esto no depende de empresa/sucursal.
+    </div>
+  </div>
+
+  <form method="post" class="card shadow-sm" id="globalsForm" data-mode="{{ mode }}">
+    {% csrf_token %}
+
+    <div class="card-body small">
+      {% if mode == "GLOBAL" %}
+        {% if action_formset.non_form_errors or matrix_formset.non_form_errors or payment_formset.non_form_errors %}
+          <div class="alert alert-danger py-2 mb-3">
+            {{ action_formset.non_form_errors }}
+            {{ matrix_formset.non_form_errors }}
+            {{ payment_formset.non_form_errors }}
+          </div>
+        {% endif %}
+
+        <div class="globals-block" data-item-id="GLOBAL">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-semibold">Permisos de acciones</div>
+            <span class="text-muted">Aplica a todas las empresas</span>
+          </div>
+
+          {{ action_formset.management_form }}
+
+          <ul class="nav nav-tabs small" id="actionTabs" role="tablist">
+            {% for g in action_groups %}
+              <li class="nav-item" role="presentation">
+                <button class="nav-link py-2 {% if forloop.first %}active{% endif %}"
+                        id="tab-{{ forloop.counter }}"
+                        data-bs-toggle="tab"
+                        data-bs-target="#pane-{{ forloop.counter }}"
+                        type="button"
+                        role="tab">
+                  {{ g }}
+                </button>
+              </li>
+            {% endfor %}
+          </ul>
+
+          <div class="tab-content border border-top-0 rounded-bottom p-2 bg-body" id="actionTabContent">
+            {% for g in action_groups %}
+              <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                   id="pane-{{ forloop.counter }}"
+                   role="tabpanel">
+
+                <div class="row g-2">
+                  {% for ap, f in action_rows %}
+                    {% if ap.group == g %}
+                      <div class="col-12">
+                        <div class="border rounded px-2 py-2">
+                          <div class="d-flex align-items-start justify-content-between gap-3">
+                            <div class="pe-2" style="min-width: 380px;">
+                              <div class="fw-semibold">{{ ap.action }}</div>
+                            </div>
+
+                            <div style="min-width: 280px;">
+                              {{ f.action_permission_id }}
+
+                              {% if ap.value_type == "BOOL" %}
+                                <div class="form-check form-switch mb-0">
+                                  {{ f.value_bool }}
+                                  <label class="form-check-label">Habilitar</label>
+                                </div>
+
+                              {% elif ap.value_type == "INT" %}
+                                <label class="form-label mb-1">Límite</label>
+                                {{ f.value_int }}
+
+                              {% elif ap.value_type == "DECIMAL" %}
+                                <label class="form-label mb-1">Valor</label>
+                                {{ f.value_decimal }}
+
+                              {% elif ap.value_type == "PERCENT" %}
+                                <label class="form-label mb-1">Porcentaje</label>
+                                {{ f.value_decimal }}
+
+                              {% elif ap.value_type == "TEXT" %}
+                                <label class="form-label mb-1">Texto</label>
+                                {{ f.value_text }}
+
+                              {% else %}
+                                <div class="text-muted small">No configurado</div>
+                              {% endif %}
+
+                              {% if f.errors %}
+                                <div class="text-danger small mt-1">{{ f.errors }}</div>
+                              {% endif %}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+
+              </div>
+            {% endfor %}
+          </div>
+
+          <hr class="my-3">
+
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-semibold">Matriz de permisos</div>
+            <span class="text-muted small">Solo se guardan filas con al menos un check</span>
+          </div>
+
+          <div class="mb-2">
+            <input id="matrixSearch" type="text" class="form-control form-control-sm matrix-search"
+                   placeholder="Buscar permiso (ignora mayúsculas y tildes)...">
+          </div>
+
+          {{ matrix_formset.management_form }}
+
+          <div class="border rounded matrix-scroll">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light matrix-head">
+                <tr>
+                  <th style="min-width: 320px;">Permisos</th>
+                  <th class="text-center">Crear</th>
+                  <th class="text-center">Modificar</th>
+                  <th class="text-center">Autorizar</th>
+                  <th class="text-center">Cerrar</th>
+                  <th class="text-center">Anular</th>
+                  <th class="text-center">Actualiza vigencia</th>
+                </tr>
+              </thead>
+              <tbody id="matrixBody">
+                {% for mp, f in matrix_rows %}
+                  <tr class="matrix-row" data-name="{{ mp.name }}">
+                    <td class="fw-semibold">
+                      {{ mp.name }}
+                      {{ f.permission_id }}
+                    </td>
+                    <td class="text-center">{{ f.can_create }}</td>
+                    <td class="text-center">{{ f.can_update }}</td>
+                    <td class="text-center">{{ f.can_authorize }}</td>
+                    <td class="text-center">{{ f.can_close }}</td>
+                    <td class="text-center">{{ f.can_cancel }}</td>
+                    <td class="text-center">{{ f.can_update_validity }}</td>
+                  </tr>
+                  {% if f.errors %}
+                    <tr>
+                      <td colspan="7" class="text-danger small">{{ f.errors }}</td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-semibold">Medios de pago</div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm py-1 pm-all">Todos</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm py-1 pm-none">Ninguno</button>
+            </div>
+          </div>
+
+          {{ payment_formset.management_form }}
+
+          <div class="row g-2">
+            {% for pm, f in payment_rows %}
+              <div class="col-md-6">
+                <label class="border rounded px-2 py-2 d-flex align-items-center gap-2 mb-0">
+                  {{ f.payment_method_id }}
+                  {{ f.enabled }}
+                  <span class="fw-semibold">{{ pm.name }}</span>
+                </label>
+                {% if f.errors %}
+                  <div class="text-danger small mt-1">{{ f.errors }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% else %}
+        <div class="alert alert-info small">Configurás globales por empresa/sucursal.</div>
+
+        {% for block in blocks %}
+          <div class="globals-block border rounded p-3 mb-4" data-item-id="{{ block.item.id }}">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div>
+                <div class="fw-semibold">{{ block.item.selection_set.company.name }}</div>
+                <div class="text-muted small">
+                  {% if block.item.selection_set.branch %}
+                    {{ block.item.selection_set.branch.name }}
+                  {% else %}
+                    Sin sucursal específica
+                  {% endif %}
+                </div>
+              </div>
+              <span class="badge text-bg-light">ID {{ block.item.id }}</span>
+            </div>
+
+            {% if block.action_formset.non_form_errors or block.matrix_formset.non_form_errors or block.payment_formset.non_form_errors %}
+              <div class="alert alert-danger py-2 mb-2">
+                {{ block.action_formset.non_form_errors }}
+                {{ block.matrix_formset.non_form_errors }}
+                {{ block.payment_formset.non_form_errors }}
+              </div>
+            {% endif %}
+
+            {{ block.action_formset.management_form }}
+
+            <ul class="nav nav-tabs small mb-2" id="actionTabs-{{ block.item.id }}" role="tablist">
+              {% for g in action_groups %}
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-2 {% if forloop.first %}active{% endif %}"
+                          id="tab-{{ block.item.id }}-{{ forloop.counter }}"
+                          data-bs-toggle="tab"
+                          data-bs-target="#pane-{{ block.item.id }}-{{ forloop.counter }}"
+                          type="button"
+                          role="tab">
+                    {{ g }}
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+
+            <div class="tab-content border border-top-0 rounded-bottom p-2 bg-body" id="actionTabContent-{{ block.item.id }}">
+              {% for g in action_groups %}
+                <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                     id="pane-{{ block.item.id }}-{{ forloop.counter }}"
+                     role="tabpanel">
+
+                  <div class="row g-2">
+                    {% for ap, f in block.action_rows %}
+                      {% if ap.group == g %}
+                        <div class="col-12">
+                          <div class="border rounded px-2 py-2">
+                            <div class="d-flex align-items-start justify-content-between gap-3">
+                              <div class="pe-2" style="min-width: 380px;">
+                                <div class="fw-semibold">{{ ap.action }}</div>
+                              </div>
+
+                              <div style="min-width: 280px;">
+                                {{ f.action_permission_id }}
+
+                                {% if ap.value_type == "BOOL" %}
+                                  <div class="form-check form-switch mb-0">
+                                    {{ f.value_bool }}
+                                    <label class="form-check-label">Habilitar</label>
+                                  </div>
+
+                                {% elif ap.value_type == "INT" %}
+                                  <label class="form-label mb-1">Límite</label>
+                                  {{ f.value_int }}
+
+                                {% elif ap.value_type == "DECIMAL" %}
+                                  <label class="form-label mb-1">Valor</label>
+                                  {{ f.value_decimal }}
+
+                                {% elif ap.value_type == "PERCENT" %}
+                                  <label class="form-label mb-1">Porcentaje</label>
+                                  {{ f.value_decimal }}
+
+                                {% elif ap.value_type == "TEXT" %}
+                                  <label class="form-label mb-1">Texto</label>
+                                  {{ f.value_text }}
+
+                                {% else %}
+                                  <div class="text-muted small">No configurado</div>
+                                {% endif %}
+
+                                {% if f.errors %}
+                                  <div class="text-danger small mt-1">{{ f.errors }}</div>
+                                {% endif %}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+
+                </div>
+              {% endfor %}
+            </div>
+
+            <hr class="my-3">
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="fw-semibold">Matriz de permisos</div>
+              <span class="text-muted small">Solo se guardan filas con al menos un check</span>
+            </div>
+
+            <div class="mb-2">
+              <input type="text" class="form-control form-control-sm matrix-search"
+                     id="matrixSearch-{{ block.item.id }}"
+                     placeholder="Buscar permiso (ignora mayúsculas y tildes)...">
+            </div>
+
+            {{ block.matrix_formset.management_form }}
+
+            <div class="border rounded matrix-scroll">
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light matrix-head">
+                  <tr>
+                    <th style="min-width: 320px;">Permisos</th>
+                    <th class="text-center">Crear</th>
+                    <th class="text-center">Modificar</th>
+                    <th class="text-center">Autorizar</th>
+                    <th class="text-center">Cerrar</th>
+                    <th class="text-center">Anular</th>
+                    <th class="text-center">Actualiza vigencia</th>
+                  </tr>
+                </thead>
+                <tbody class="matrix-body">
+                  {% for mp, f in block.matrix_rows %}
+                    <tr class="matrix-row" data-name="{{ mp.name }}">
+                      <td class="fw-semibold">
+                        {{ mp.name }}
+                        {{ f.permission_id }}
+                      </td>
+                      <td class="text-center">{{ f.can_create }}</td>
+                      <td class="text-center">{{ f.can_update }}</td>
+                      <td class="text-center">{{ f.can_authorize }}</td>
+                      <td class="text-center">{{ f.can_close }}</td>
+                      <td class="text-center">{{ f.can_cancel }}</td>
+                      <td class="text-center">{{ f.can_update_validity }}</td>
+                    </tr>
+                    {% if f.errors %}
+                      <tr>
+                        <td colspan="7" class="text-danger small">{{ f.errors }}</td>
+                      </tr>
+                    {% endif %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="fw-semibold">Medios de pago</div>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm py-1 pm-all">Todos</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-1 pm-none">Ninguno</button>
+              </div>
+            </div>
+
+            {{ block.payment_formset.management_form }}
+
+            <div class="row g-2">
+              {% for pm, f in block.payment_rows %}
+                <div class="col-md-6">
+                  <label class="border rounded px-2 py-2 d-flex align-items-center gap-2 mb-0">
+                    {{ f.payment_method_id }}
+                    {{ f.enabled }}
+                    <span class="fw-semibold">{{ pm.name }}</span>
+                  </label>
+                  {% if f.errors %}
+                    <div class="text-danger small mt-1">{{ f.errors }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="{% url 'catalog:wizard_step_3_modules' %}">Atrás</a>
+      <button type="submit" class="btn btn-primary">Continuar</button>
+    </div>
+  </form>
+</div>
+
+<style>
+  /* Compactación general */
+  .card-body.small .form-label { margin-bottom: .25rem; }
+  .card-body.small .border.rounded { border-color: rgba(0,0,0,.12) !important; }
+
+  /* Matriz con scroll propio + headers sticky */
+  .matrix-scroll {
+    max-height: 420px;      /* ajustable: 360/420/520 según gusto */
+    overflow: auto;
+  }
+  .matrix-head th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+</style>
+
+<script>
+(function () {
+  function norm(s) {
+    return (s || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
+  function setupBlock(block) {
+    const matrixSearch = block.querySelector(".matrix-search");
+    const matrixRows = () => Array.from(block.querySelectorAll(".matrix-row"));
+
+    function filterMatrix() {
+      const q = norm(matrixSearch?.value);
+      matrixRows().forEach(row => {
+        const name = norm(row.getAttribute("data-name"));
+        row.classList.toggle("d-none", q && !name.includes(q));
+      });
+    }
+
+    if (matrixSearch) {
+      matrixSearch.addEventListener("input", filterMatrix);
+      filterMatrix();
+    }
+
+    const pmAll = block.querySelector(".pm-all");
+    const pmNone = block.querySelector(".pm-none");
+    const pmChecks = () => Array.from(block.querySelectorAll('input[name$="-enabled"]'));
+
+    if (pmAll) pmAll.addEventListener("click", () => pmChecks().forEach(c => c.checked = true));
+    if (pmNone) pmNone.addEventListener("click", () => pmChecks().forEach(c => c.checked = false));
+  }
+
+  document.querySelectorAll(".globals-block").forEach(setupBlock);
+})();
+</script>
+{% endblock %}

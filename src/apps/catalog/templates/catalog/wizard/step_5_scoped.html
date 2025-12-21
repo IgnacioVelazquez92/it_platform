@@ -1,0 +1,253 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1100px;">
+  {% include "catalog/wizard/_progress.html" with step=5 total_steps=6 progress_percent=90 request_obj=request_obj %}
+
+  <div class="mb-3">
+    <h3 class="mb-1">Accesos por empresa</h3>
+    <div class="text-muted small">
+      Paneles y vendedores se completan por empresa. Depósitos y cajas se completan por sucursal.
+    </div>
+  </div>
+
+  <form method="post" class="card shadow-sm">
+    {% csrf_token %}
+
+    <div class="card-body small">
+      <div class="accordion" id="accCompanies">
+        {% for cb in companies_blocks %}
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="hC{{ forloop.counter }}">
+              <button
+                class="accordion-button {% if not forloop.first %}collapsed{% endif %}"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#cC{{ forloop.counter }}"
+                aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+                aria-controls="cC{{ forloop.counter }}"
+              >
+                <span class="fw-semibold">{{ cb.company.name }}</span>
+              </button>
+            </h2>
+
+            <div
+              id="cC{{ forloop.counter }}"
+              class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+              data-bs-parent="#accCompanies"
+            >
+              <div class="accordion-body">
+
+                {% if cb.company_form.non_field_errors %}
+                  <div class="alert alert-danger py-2 mb-3">
+                    {{ cb.company_form.non_field_errors }}
+                  </div>
+                {% endif %}
+
+                <div class="row g-3">
+                  <!-- Paneles -->
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                      <div class="fw-semibold">Paneles</div>
+                      <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary js-all">Todos</button>
+                        <button type="button" class="btn btn-outline-secondary js-none">Ninguno</button>
+                      </div>
+                    </div>
+
+                    <div class="border rounded p-2 scoped-box" data-scope="panels">
+                      {# IMPORTANTE: renderizamos el field completo, NO inputs a mano #}
+                      {{ cb.company_form.control_panels }}
+                    </div>
+
+                    {% if cb.company_form.control_panels.errors %}
+                      <div class="text-danger small mt-1">
+                        {{ cb.company_form.control_panels.errors }}
+                      </div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Vendedores -->
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                      <div class="fw-semibold">Vendedores</div>
+                      <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary js-all">Todos</button>
+                        <button type="button" class="btn btn-outline-secondary js-none">Ninguno</button>
+                      </div>
+                    </div>
+
+                    <div class="border rounded p-2 scoped-box" data-scope="sellers">
+                      {{ cb.company_form.sellers }}
+                    </div>
+
+                    {% if cb.company_form.sellers.errors %}
+                      <div class="text-danger small mt-1">
+                        {{ cb.company_form.sellers.errors }}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                {% if cb.branches_blocks %}
+                  <hr class="my-3">
+
+                  <div class="accordion" id="accBranches{{ forloop.counter }}">
+                    {% for bb in cb.branches_blocks %}
+                      <div class="accordion-item">
+                        <h2 class="accordion-header" id="hB{{ forloop.parentloop.counter }}_{{ forloop.counter }}">
+                          <button
+                            class="accordion-button collapsed py-2"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#cB{{ forloop.parentloop.counter }}_{{ forloop.counter }}"
+                            aria-expanded="false"
+                            aria-controls="cB{{ forloop.parentloop.counter }}_{{ forloop.counter }}"
+                          >
+                            <span class="fw-semibold">{{ bb.branch.name }}</span>
+                          </button>
+                        </h2>
+
+                        <div
+                          id="cB{{ forloop.parentloop.counter }}_{{ forloop.counter }}"
+                          class="accordion-collapse collapse"
+                          data-bs-parent="#accBranches{{ forloop.parentloop.counter }}"
+                        >
+                          <div class="accordion-body pt-2">
+
+                            {% if bb.form.non_field_errors %}
+                              <div class="alert alert-danger py-2 mb-2">
+                                {{ bb.form.non_field_errors }}
+                              </div>
+                            {% endif %}
+
+                            <div class="row g-3">
+                              <!-- Depósitos -->
+                              <div class="col-md-6">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                  <div class="fw-semibold">Depósitos</div>
+                                  <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary js-all">Todos</button>
+                                    <button type="button" class="btn btn-outline-secondary js-none">Ninguno</button>
+                                  </div>
+                                </div>
+
+                                <div class="border rounded p-2 scoped-box" data-scope="warehouses">
+                                  {{ bb.form.warehouses }}
+                                </div>
+
+                                {% if bb.form.warehouses.errors %}
+                                  <div class="text-danger small mt-1">
+                                    {{ bb.form.warehouses.errors }}
+                                  </div>
+                                {% endif %}
+                              </div>
+
+                              <!-- Cajas -->
+                              <div class="col-md-6">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                  <div class="fw-semibold">Cajas</div>
+                                  <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary js-all">Todos</button>
+                                    <button type="button" class="btn btn-outline-secondary js-none">Ninguno</button>
+                                  </div>
+                                </div>
+
+                                <div class="border rounded p-2 scoped-box" data-scope="cash_registers">
+                                  {{ bb.form.cash_registers }}
+                                </div>
+
+                                {% if bb.form.cash_registers.errors %}
+                                  <div class="text-danger small mt-1">
+                                    {{ bb.form.cash_registers.errors }}
+                                  </div>
+                                {% endif %}
+                              </div>
+                            </div>
+
+                          </div>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="text-muted small mt-3">No hay sucursales seleccionadas para esta empresa.</div>
+                {% endif %}
+
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="{% url 'catalog:wizard_step_4_globals' %}">Atrás</a>
+      <button type="submit" class="btn btn-primary">Continuar</button>
+    </div>
+  </form>
+</div>
+
+<style>
+  /* Caja scroll compacta */
+  .scoped-box {
+    max-height: 260px;
+    overflow: auto;
+    background: var(--bs-body-bg);
+  }
+
+  /* CheckboxSelectMultiple de Django: lo dejamos correcto y lo hacemos compacto */
+  .scoped-box ul { list-style: none; padding-left: 0; margin: 0; }
+  .scoped-box li { padding: .15rem 0; }
+
+  /* Hacemos que cada <label> se vea como "form-check" sin re-render */
+  .scoped-box label {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0;
+    cursor: pointer;
+    user-select: none;
+    line-height: 1.1;
+  }
+
+  .scoped-box input[type="checkbox"] {
+    margin: 0;
+    width: 1.05rem;
+    height: 1.05rem;
+    flex: 0 0 auto;
+  }
+</style>
+
+<script>
+(function () {
+  function findBox(btn) {
+    // el .scoped-box dentro de la misma columna/bloque
+    const col = btn.closest(".col-md-6");
+    if (col) return col.querySelector(".scoped-box");
+    const body = btn.closest(".accordion-body");
+    if (body) return body.querySelector(".scoped-box");
+    return null;
+  }
+
+  function setAll(box, checked) {
+    if (!box) return;
+    box.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = checked; });
+  }
+
+  document.querySelectorAll(".js-all").forEach(btn => {
+    btn.addEventListener("click", () => setAll(findBox(btn), true));
+  });
+
+  document.querySelectorAll(".js-none").forEach(btn => {
+    btn.addEventListener("click", () => setAll(findBox(btn), false));
+  });
+
+  // Opcional: al cargar, convertimos el HTML que genera Django (ul/li) a algo más Bootstrap
+  // sin tocar values/names (no rompemos el POST).
+  document.querySelectorAll(".scoped-box ul").forEach(ul => {
+    ul.classList.add("vstack", "gap-1");
+  });
+})();
+</script>
+{% endblock %}

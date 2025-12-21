@@ -10,3 +10,24 @@ DATABASES = {
         "NAME": PROJECT_DIR / "db.sqlite3",
     }
 }
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "apps.catalog": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}
+
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "CatalogoPermisos <no-reply@local>"
+CATALOG_IT_NOTIFY_EMAILS = ["tu_mail@empresa.com", "it@empresa.com"]

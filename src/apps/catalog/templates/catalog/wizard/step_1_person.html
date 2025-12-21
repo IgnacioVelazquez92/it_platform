@@ -1,63 +1,74 @@
 {% extends "base/base.html" %}
-{% block title %}Paso 1 | Persona{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <h4 class="mb-3">Nueva solicitud — Datos de persona</h4>
+<div class="container py-4" style="max-width: 980px;">
+  {% include "catalog/wizard/_progress.html" with step=1 total_steps=5 progress_percent=20 request_obj=request_obj %}
 
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <form method="post" novalidate>
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-          <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Error:</strong>
-            {% for error in form.non_field_errors %}
-              <div>{{ error }}</div>
-            {% endfor %}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endif %}
-
-        <div class="row g-3">
-          {% for field in form %}
-            {% if field.field.widget.input_type != 'hidden' %}
-              <div class="col-md-6">
-                <label class="form-label" for="{{ field.id_for_label }}">
-                  {{ field.label }}
-                  {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
-                </label>
-                {% if field.errors %}
-                  {{ field }}
-                  <div class="invalid-feedback d-block">
-                    {% for error in field.errors %}
-                      <div>{{ error }}</div>
-                    {% endfor %}
-                  </div>
-                {% else %}
-                  {{ field }}
-                {% endif %}
-                {% if field.help_text %}
-                  <small class="form-text text-muted d-block mt-1">{{ field.help_text|safe }}</small>
-                {% endif %}
-              </div>
-            {% else %}
-              {{ field }}
-            {% endif %}
-          {% endfor %}
-        </div>
-
-        <div class="mt-4 d-flex gap-2">
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-circle"></i> Guardar y continuar
-          </button>
-          <a href="{% url 'home' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-x-circle"></i> Cancelar
-          </a>
-        </div>
-      </form>
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h3 class="mb-1">Datos de la persona</h3>
+      <div class="text-muted">Cargá la información tal como debe quedar registrada en la solicitud.</div>
     </div>
   </div>
+
+  <form method="post" class="card shadow-sm">
+    {% csrf_token %}
+
+    <div class="card-body">
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">{{ form.first_name.label }}</label>
+          {{ form.first_name }}
+          {% if form.first_name.errors %}<div class="invalid-feedback d-block">{{ form.first_name.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">{{ form.last_name.label }}</label>
+          {{ form.last_name }}
+          {% if form.last_name.errors %}<div class="invalid-feedback d-block">{{ form.last_name.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">{{ form.dni.label }}</label>
+          {{ form.dni }}
+          {% if form.dni.errors %}<div class="invalid-feedback d-block">{{ form.dni.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">{{ form.email.label }}</label>
+          {{ form.email }}
+          {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">{{ form.mobile_phone.label }}</label>
+          {{ form.mobile_phone }}
+          {% if form.mobile_phone.errors %}<div class="invalid-feedback d-block">{{ form.mobile_phone.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">{{ form.job_title.label }}</label>
+          {{ form.job_title }}
+          {% if form.job_title.errors %}<div class="invalid-feedback d-block">{{ form.job_title.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label fw-semibold">{{ form.direct_manager.label }}</label>
+          {{ form.direct_manager }}
+          {% if form.direct_manager.errors %}<div class="invalid-feedback d-block">{{ form.direct_manager.errors|striptags }}</div>{% endif %}
+          <div class="text-muted small mt-1">Ej: “Juan Pérez” o “Paula García”.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="{% url 'catalog:wizard_step_0_start' %}">Atrás</a>
+      <button type="submit" class="btn btn-primary">Continuar</button>
+    </div>
+  </form>
 </div>
 {% endblock %}

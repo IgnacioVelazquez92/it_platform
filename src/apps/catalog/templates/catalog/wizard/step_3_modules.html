@@ -1,0 +1,458 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 980px;">
+  {% include "catalog/wizard/_progress.html" with step=3 total_steps=5 progress_percent=60 request_obj=request_obj %}
+
+  <div class="mb-3">
+    <h3 class="mb-1">Módulos ERP</h3>
+    <div class="text-muted">
+      Seleccioná módulos (rápido) y refiná niveles/subniveles (opcional).
+    </div>
+  </div>
+
+  <form method="post" class="card shadow-sm" id="modulesForm" data-mode="{{ mode }}">
+    {% csrf_token %}
+
+    <div class="card-body">
+      {% if mode == "GLOBAL" %}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="fw-semibold">Seleccioná módulos</div>
+          <span class="text-muted small">Aplica a todas las empresas</span>
+        </div>
+
+        <div class="module-block" data-item-id="GLOBAL">
+          <div class="mb-3">
+            <input type="text" class="form-control module-search" placeholder="Buscar módulo...">
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 module-pills">
+            {% for cb in form.modules %}
+              <label class="btn btn-outline-primary d-flex align-items-center gap-2 px-3 py-2 module-pill">
+                <input class="form-check-input mt-0 module-checkbox"
+                       type="checkbox"
+                       name="{{ cb.data.name }}"
+                       value="{{ cb.data.value }}"
+                       {% if cb.data.selected %}checked{% endif %}>
+                <span class="fw-semibold module-label">{{ cb.choice_label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+
+          {% if form.modules.errors %}
+            <div class="alert alert-danger py-2 mt-3 small">{{ form.modules.errors|striptags }}</div>
+          {% endif %}
+
+          <div class="mt-4">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="fw-semibold">Refinar accesos (niveles y subniveles)</div>
+              <span class="text-muted small">Opcional</span>
+            </div>
+            <div class="text-muted small mt-1">
+              Se muestran solo los módulos seleccionados. Por defecto, módulo marcado = todo adentro habilitado.
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+              <input type="text" class="form-control sub-search" placeholder="Buscar subnivel... (ej: Presupuestos)">
+              <button type="button" class="btn btn-outline-secondary clear-sub">Limpiar subniveles</button>
+            </div>
+
+            <div class="mt-3 refine-empty">
+              <div class="text-muted small">Seleccioná al menos un módulo para ver el detalle.</div>
+            </div>
+
+            <div class="accordion d-none mt-2 refine-accordion" id="refineAccordion">
+              {% for mod in module_tree %}
+                <div class="accordion-item refine-module" data-module-id="{{ mod.id }}" data-item-id="GLOBAL">
+                  <h2 class="accordion-header" id="headingM{{ mod.id }}">
+                    <button class="accordion-button collapsed py-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseM{{ mod.id }}">
+                      {{ mod.name }}
+                    </button>
+                  </h2>
+
+                  <div id="collapseM{{ mod.id }}" class="accordion-collapse collapse" data-bs-parent="#refineAccordion">
+                    <div class="accordion-body">
+
+                      <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="d-flex align-items-center gap-2 mb-0">
+                          <input type="checkbox" class="form-check-input mt-0 module-all"
+                                 data-module-id="{{ mod.id }}">
+                          <span class="fw-semibold">Todo el módulo</span>
+                        </label>
+                        <span class="text-muted small">Podés desmarcar subniveles</span>
+                      </div>
+
+                      <div class="accordion" id="levelsA{{ mod.id }}">
+                        {% for lvl in mod.levels %}
+                          <div class="accordion-item refine-level" data-level-id="{{ lvl.id }}" data-module-id="{{ mod.id }}">
+                            <h2 class="accordion-header" id="headingL{{ lvl.id }}">
+                              <button class="accordion-button collapsed py-2" type="button"
+                                      data-bs-toggle="collapse" data-bs-target="#collapseL{{ lvl.id }}">
+                                {{ lvl.name }}
+                              </button>
+                            </h2>
+
+                            <div id="collapseL{{ lvl.id }}" class="accordion-collapse collapse" data-bs-parent="#levelsA{{ mod.id }}">
+                              <div class="accordion-body">
+
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                  <label class="d-flex align-items-center gap-2 mb-0">
+                                    <input type="checkbox" class="form-check-input mt-0 level-all"
+                                           data-level-id="{{ lvl.id }}" data-module-id="{{ mod.id }}">
+                                    <span class="fw-semibold">Todo el nivel</span>
+                                  </label>
+                                </div>
+
+                                {% if lvl.sublevels %}
+                                  <div class="row g-2">
+                                    {% for sub in lvl.sublevels %}
+                                      <div class="col-md-6 sub-row" data-sub-text="{{ sub.name|lower }}">
+                                        <label class="border rounded p-2 d-flex align-items-center gap-2">
+                                          <input type="checkbox"
+                                                 class="form-check-input mt-0 sublevel-checkbox"
+                                                 name="sublevels"
+                                                 value="{{ sub.id }}"
+                                                 data-module-id="{{ mod.id }}"
+                                                 data-level-id="{{ lvl.id }}"
+                                                 {% if sub.id|stringformat:"s" in selected_sublevel_ids %}checked{% endif %}>
+                                          <div>
+                                            <div class="fw-semibold">{{ sub.name }}</div>
+                                            <div class="text-muted small">{{ lvl.name }}</div>
+                                          </div>
+                                        </label>
+                                      </div>
+                                    {% endfor %}
+                                  </div>
+                                {% else %}
+                                  <div class="text-muted small">No hay subniveles activos en este nivel.</div>
+                                {% endif %}
+                              </div>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="alert alert-info small">
+          Configurás módulos por empresa/sucursal. Cada bloque aplica solo a ese alcance.
+        </div>
+
+        {% for row in forms_by_item %}
+          <div class="mb-4 p-3 border rounded module-block" data-item-id="{{ row.item.id }}">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div>
+                <div class="fw-semibold">{{ row.item.selection_set.company.name }}</div>
+                <div class="text-muted small">
+                  {% if row.item.selection_set.branch %}
+                    {{ row.item.selection_set.branch.name }}
+                  {% else %}
+                    Sin sucursal específica
+                  {% endif %}
+                </div>
+              </div>
+              <span class="badge text-bg-light">ID {{ row.item.id }}</span>
+            </div>
+
+            {% if row.form.non_field_errors %}
+              <div class="alert alert-danger py-2 small mb-3">{{ row.form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="mb-3">
+              <input type="text" class="form-control module-search" placeholder="Buscar módulo...">
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 module-pills">
+              {% for cb in row.form.modules %}
+                <label class="btn btn-outline-primary d-flex align-items-center gap-2 px-3 py-2 module-pill">
+                  <input class="form-check-input mt-0 module-checkbox"
+                         type="checkbox"
+                         name="{{ cb.data.name }}"
+                         value="{{ cb.data.value }}"
+                         {% if cb.data.selected %}checked{% endif %}>
+                  <span class="fw-semibold module-label">{{ cb.choice_label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+
+            {% if row.form.modules.errors %}
+              <div class="alert alert-danger py-2 mt-3 small">{{ row.form.modules.errors|striptags }}</div>
+            {% endif %}
+
+            <div class="mt-3">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="fw-semibold">Refinar accesos (niveles y subniveles)</div>
+                <span class="text-muted small">Opcional</span>
+              </div>
+              <div class="text-muted small mt-1">Solo módulos seleccionados arriba.</div>
+
+              <div class="mt-3 d-flex gap-2">
+                <input type="text" class="form-control sub-search" placeholder="Buscar subnivel... (ej: Presupuestos)">
+                <button type="button" class="btn btn-outline-secondary clear-sub">Limpiar subniveles</button>
+              </div>
+
+              <div class="mt-3 refine-empty">
+                <div class="text-muted small">Seleccioná al menos un módulo para ver el detalle.</div>
+              </div>
+
+              <div class="accordion d-none mt-2 refine-accordion" id="refineAccordion-{{ row.item.id }}">
+                {% for mod in module_tree %}
+                  <div class="accordion-item refine-module" data-module-id="{{ mod.id }}" data-item-id="{{ row.item.id }}">
+                    <h2 class="accordion-header" id="headingM{{ row.item.id }}-{{ mod.id }}">
+                      <button class="accordion-button collapsed py-2" type="button"
+                              data-bs-toggle="collapse" data-bs-target="#collapseM{{ row.item.id }}-{{ mod.id }}">
+                        {{ mod.name }}
+                      </button>
+                    </h2>
+
+                    <div id="collapseM{{ row.item.id }}-{{ mod.id }}" class="accordion-collapse collapse" data-bs-parent="#refineAccordion-{{ row.item.id }}">
+                      <div class="accordion-body">
+
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                          <label class="d-flex align-items-center gap-2 mb-0">
+                            <input type="checkbox" class="form-check-input mt-0 module-all"
+                                   data-module-id="{{ mod.id }}" data-item-id="{{ row.item.id }}">
+                            <span class="fw-semibold">Todo el módulo</span>
+                          </label>
+                          <span class="text-muted small">Podés desmarcar subniveles</span>
+                        </div>
+
+                        <div class="accordion" id="levelsA{{ row.item.id }}-{{ mod.id }}">
+                          {% for lvl in mod.levels %}
+                            <div class="accordion-item refine-level" data-level-id="{{ lvl.id }}" data-module-id="{{ mod.id }}" data-item-id="{{ row.item.id }}">
+                              <h2 class="accordion-header" id="headingL{{ row.item.id }}-{{ lvl.id }}">
+                                <button class="accordion-button collapsed py-2" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#collapseL{{ row.item.id }}-{{ lvl.id }}">
+                                  {{ lvl.name }}
+                                </button>
+                              </h2>
+
+                              <div id="collapseL{{ row.item.id }}-{{ lvl.id }}" class="accordion-collapse collapse" data-bs-parent="#levelsA{{ row.item.id }}-{{ mod.id }}">
+                                <div class="accordion-body">
+
+                                  <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label class="d-flex align-items-center gap-2 mb-0">
+                                      <input type="checkbox" class="form-check-input mt-0 level-all"
+                                             data-level-id="{{ lvl.id }}" data-module-id="{{ mod.id }}" data-item-id="{{ row.item.id }}">
+                                      <span class="fw-semibold">Todo el nivel</span>
+                                    </label>
+                                  </div>
+
+                                  {% if lvl.sublevels %}
+                                    <div class="row g-2">
+                                      {% for sub in lvl.sublevels %}
+                                        <div class="col-md-6 sub-row" data-sub-text="{{ sub.name|lower }}">
+                                          <label class="border rounded p-2 d-flex align-items-center gap-2">
+                                            <input type="checkbox"
+                                                   class="form-check-input mt-0 sublevel-checkbox"
+                                                   name="{{ row.form.prefix }}-sublevels"
+                                                   value="{{ sub.id }}"
+                                                   data-module-id="{{ mod.id }}"
+                                                   data-level-id="{{ lvl.id }}"
+                                                   data-item-id="{{ row.item.id }}"
+                                                   {% if sub.id|stringformat:"s" in row.selected_sublevel_ids %}checked{% endif %}>
+                                            <div>
+                                              <div class="fw-semibold">{{ sub.name }}</div>
+                                              <div class="text-muted small">{{ lvl.name }}</div>
+                                            </div>
+                                          </label>
+                                        </div>
+                                      {% endfor %}
+                                    </div>
+                                  {% else %}
+                                    <div class="text-muted small">No hay subniveles activos en este nivel.</div>
+                                  {% endif %}
+                                </div>
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <input type="hidden" name="refine_enabled" id="refineEnabled" value="0">
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="{% url 'catalog:wizard_step_2_companies' %}">Atrás</a>
+      <button type="submit" class="btn btn-primary">Continuar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  const refineEnabled = document.getElementById("refineEnabled");
+
+  function updateRefineEnabled() {
+    const anySelected = document.querySelectorAll(".module-checkbox:checked").length > 0;
+    refineEnabled.value = anySelected ? "1" : "0";
+  }
+
+  function setupBlock(block) {
+    const moduleSearch = block.querySelector(".module-search");
+    const modulePills = block.querySelector(".module-pills");
+    const subSearch = block.querySelector(".sub-search");
+    const clearSubBtn = block.querySelector(".clear-sub");
+    const refineAccordion = block.querySelector(".refine-accordion");
+    const refineEmpty = block.querySelector(".refine-empty");
+
+    const moduleCheckboxes = Array.from(block.querySelectorAll(".module-checkbox"));
+    const sublevelCheckboxes = () => Array.from(block.querySelectorAll(".sublevel-checkbox"));
+
+    function selectedModuleIds() {
+      return new Set(moduleCheckboxes.filter(cb => cb.checked).map(cb => cb.value));
+    }
+
+    function filterModules() {
+      if (!moduleSearch || !modulePills) return;
+      const q = (moduleSearch.value || "").toLowerCase().trim();
+      modulePills.querySelectorAll(".module-pill").forEach(p => {
+        const txt = (p.querySelector(".module-label")?.innerText || "").toLowerCase();
+        p.classList.toggle("d-none", q && !txt.includes(q));
+      });
+    }
+
+    function filterSublevels() {
+      if (!subSearch) return;
+      const q = (subSearch.value || "").toLowerCase().trim();
+      block.querySelectorAll(".sub-row").forEach(row => {
+        const txt = row.getAttribute("data-sub-text") || "";
+        row.classList.toggle("d-none", q && !txt.includes(q));
+      });
+    }
+
+    function setAllInLevel(levelId, checked) {
+      const pane = block.querySelector(`.refine-level[data-level-id="${levelId}"]`);
+      if (!pane) return;
+      pane.querySelectorAll("input.sublevel-checkbox").forEach(cb => cb.checked = checked);
+    }
+
+    function setAllInModule(moduleId, checked) {
+      const pane = block.querySelector(`.refine-module[data-module-id="${moduleId}"]`);
+      if (!pane) return;
+      pane.querySelectorAll("input.sublevel-checkbox").forEach(cb => cb.checked = checked);
+      pane.querySelectorAll("input.level-all").forEach(cb => cb.checked = checked);
+    }
+
+    function syncAllToggles() {
+      block.querySelectorAll(".refine-level").forEach(pane => {
+        if (pane.classList.contains("d-none")) return;
+        const subs = Array.from(pane.querySelectorAll("input.sublevel-checkbox"));
+        const levelAll = pane.querySelector("input.level-all");
+        if (!levelAll || subs.length === 0) return;
+        levelAll.checked = subs.every(s => s.checked);
+      });
+
+      block.querySelectorAll(".refine-module").forEach(pane => {
+        if (pane.classList.contains("d-none")) return;
+        const subs = Array.from(pane.querySelectorAll("input.sublevel-checkbox"));
+        const moduleAll = pane.querySelector("input.module-all");
+        if (!moduleAll || subs.length === 0) return;
+        moduleAll.checked = subs.every(s => s.checked);
+      });
+    }
+
+    function syncRefineVisibility() {
+      if (!refineAccordion || !refineEmpty) {
+        updateRefineEnabled();
+        return;
+      }
+
+      const selected = selectedModuleIds();
+      if (selected.size === 0) {
+        refineAccordion.classList.add("d-none");
+        refineEmpty.classList.remove("d-none");
+        sublevelCheckboxes().forEach(cb => cb.checked = false);
+        updateRefineEnabled();
+        return;
+      }
+
+      refineAccordion.classList.remove("d-none");
+      refineEmpty.classList.add("d-none");
+
+      refineAccordion.querySelectorAll(".refine-module").forEach(m => {
+        const mid = m.getAttribute("data-module-id");
+        const visible = selected.has(mid);
+        m.classList.toggle("d-none", !visible);
+        if (!visible) {
+          m.querySelectorAll("input.sublevel-checkbox").forEach(cb => cb.checked = false);
+        }
+      });
+
+      syncAllToggles();
+      updateRefineEnabled();
+    }
+
+    // Eventos de nivel/módulo
+    block.querySelectorAll(".level-all").forEach(chk => {
+      chk.addEventListener("change", () => {
+        setAllInLevel(chk.getAttribute("data-level-id"), chk.checked);
+        syncAllToggles();
+        updateRefineEnabled();
+      });
+    });
+
+    block.querySelectorAll(".module-all").forEach(chk => {
+      chk.addEventListener("change", () => {
+        setAllInModule(chk.getAttribute("data-module-id"), chk.checked);
+        syncAllToggles();
+        updateRefineEnabled();
+      });
+    });
+
+    block.querySelectorAll("input.sublevel-checkbox").forEach(cb => {
+      cb.addEventListener("change", () => {
+        syncAllToggles();
+        updateRefineEnabled();
+      });
+    });
+
+    moduleCheckboxes.forEach(cb => cb.addEventListener("change", syncRefineVisibility));
+
+    if (moduleSearch) moduleSearch.addEventListener("input", filterModules);
+    if (subSearch) subSearch.addEventListener("input", filterSublevels);
+    if (clearSubBtn) {
+      clearSubBtn.addEventListener("click", () => {
+        sublevelCheckboxes().forEach(cb => cb.checked = false);
+        syncAllToggles();
+        updateRefineEnabled();
+      });
+    }
+
+    // Init
+    filterModules();
+    filterSublevels();
+    syncRefineVisibility();
+    syncAllToggles();
+  }
+
+  document.querySelectorAll(".module-block").forEach(setupBlock);
+  updateRefineEnabled();
+})();
+</script>
+
+<style>
+  /* similar a Step 2 */
+  .module-pill input.form-check-input { pointer-events: none; }
+</style>
+{% endblock %}

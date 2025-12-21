@@ -59,6 +59,9 @@ class AccessRequest(models.Model):
 
     notes = models.TextField(blank=True, default="")
 
+    # Flag para decidir si los módulos se comparten entre todas las empresas
+    same_modules_for_all = models.BooleanField(default=True)
+
     created_at = models.DateTimeField("Creado", auto_now_add=True)
     updated_at = models.DateTimeField("Actualizado", auto_now=True)
 

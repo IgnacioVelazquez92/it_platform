@@ -1,0 +1,265 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 980px;">
+  {% include "catalog/wizard/_progress.html" with step=2 total_steps=5 progress_percent=40 request_obj=request_obj %}
+
+  <div class="mb-3">
+    <h3 class="mb-1">Empresas y sucursales</h3>
+    <div class="text-muted">
+      Elegí el alcance. Primero empresas; luego, si hace falta, seleccionás sucursales específicas.
+    </div>
+  </div>
+
+  <form method="post" class="card shadow-sm">
+    {% csrf_token %}
+
+    <div class="card-body">
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row g-4">
+        <!-- Empresas -->
+        <div class="col-12">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-semibold">Empresas</div>
+            <span class="text-muted small">Obligatorio</span>
+          </div>
+
+          {% if form.companies.errors %}
+            <div class="alert alert-danger py-2 mb-2 small">{{ form.companies.errors|striptags }}</div>
+          {% endif %}
+
+          <div class="d-flex flex-wrap gap-2">
+            {% for cb in form.companies %}
+              <label class="btn btn-outline-primary d-flex align-items-center gap-2 px-3 py-2 company-pill">
+                <input class="form-check-input mt-0 company-checkbox"
+                       type="checkbox"
+                       name="{{ cb.data.name }}"
+                       value="{{ cb.data.value }}"
+                       id="{{ cb.id_for_label }}"
+                       {% if cb.data.selected %}checked{% endif %}>
+                <span class="fw-semibold">{{ cb.choice_label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+
+          <div class="text-muted small mt-2">
+            Si no seleccionás sucursales, se interpreta como acceso a nivel empresa (sin sucursal específica).
+          </div>
+        </div>
+
+        <!-- Sucursales -->
+        <div class="col-12">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-semibold">Sucursales</div>
+            <span class="text-muted small">Opcional</span>
+          </div>
+
+          {% if form.branches.errors %}
+            <div class="alert alert-danger py-2 mb-2 small">{{ form.branches.errors|striptags }}</div>
+          {% endif %}
+
+          <div class="p-3 border rounded">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="text-muted small">
+                Se muestran solo las sucursales de las empresas elegidas.
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="clearBranchesBtn">
+                Limpiar sucursales
+              </button>
+            </div>
+
+            <div class="mt-3" id="branchesEmptyState">
+              <div class="text-muted small">
+                Seleccioná al menos una empresa para ver sus sucursales.
+              </div>
+            </div>
+
+            <div class="accordion mt-2 d-none" id="branchesAccordion">
+              {% for block in company_blocks %}
+                <div class="accordion-item branch-company" data-company-id="{{ block.company.id }}">
+                  <h2 class="accordion-header" id="heading{{ block.company.id }}">
+                    <button class="accordion-button collapsed py-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapse{{ block.company.id }}"
+                            aria-expanded="false" aria-controls="collapse{{ block.company.id }}">
+                      {{ block.company.name }}
+                      <span class="ms-2 badge text-bg-light">{{ block.branches|length }}</span>
+                    </button>
+                  </h2>
+
+                  <div id="collapse{{ block.company.id }}" class="accordion-collapse collapse"
+                       aria-labelledby="heading{{ block.company.id }}" data-bs-parent="#branchesAccordion">
+                    <div class="accordion-body">
+                      {% if block.branches %}
+                        <div class="row g-2">
+                          {% for b in block.branches %}
+                            <div class="col-md-6">
+                              <label class="border rounded p-2 d-flex align-items-center gap-2">
+                                <input class="form-check-input mt-0 branch-checkbox"
+                                       type="checkbox"
+                                       name="branches"
+                                       value="{{ b.id }}"
+                                       {% if b.id|stringformat:"s" in selected_branch_ids %}checked{% endif %}>
+                                <span>{{ b.name }}</span>
+                              </label>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <div class="text-muted small">No hay sucursales activas para esta empresa.</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mt-3 p-3 border rounded">
+            <div class="fw-semibold mb-1">Resumen</div>
+            <div class="text-muted small" id="summaryText">Seleccioná empresas para ver el resumen.</div>
+          </div>
+        </div>
+
+        <!-- Replicación (solo si > 1 empresa) -->
+        <div class="col-12" id="replicationBox" style="display:none;">
+          <div class="p-3 border rounded bg-body-tertiary">
+            <div class="fw-semibold mb-2">{{ form.same_modules_for_all.label }}</div>
+
+            {% if form.same_modules_for_all.errors %}
+              <div class="alert alert-danger py-2 mb-2 small">{{ form.same_modules_for_all.errors|striptags }}</div>
+            {% endif %}
+
+            <div class="row g-2">
+              {% for r in form.same_modules_for_all %}
+                <div class="col-md-6">
+                  <label class="border rounded p-2 d-flex gap-2 align-items-start h-100">
+                    <input class="form-check-input mt-1"
+                           type="radio"
+                           name="{{ r.data.name }}"
+                           value="{{ r.data.value }}"
+                           {% if r.data.selected %}checked{% endif %}>
+                    <div>
+                      <div class="fw-semibold">{{ r.choice_label }}</div>
+                      {% if r.data.value == "1" %}
+                        <div class="text-muted small">Cargás módulos/globales una sola vez. Luego ajustás solo lo scoped.</div>
+                      {% else %}
+                        <div class="text-muted small">Útil si cada empresa requiere módulos/globales distintos.</div>
+                      {% endif %}
+                    </div>
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <a class="btn btn-outline-secondary" href="{% url 'catalog:wizard_step_1_person' %}">Atrás</a>
+      <button type="submit" class="btn btn-primary">Continuar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  const companyChecks = Array.from(document.querySelectorAll(".company-checkbox"));
+  const branchChecks  = () => Array.from(document.querySelectorAll(".branch-checkbox"));
+  const replicationBox = document.getElementById("replicationBox");
+
+  const branchesAccordion = document.getElementById("branchesAccordion");
+  const branchesEmptyState = document.getElementById("branchesEmptyState");
+  const clearBranchesBtn = document.getElementById("clearBranchesBtn");
+  const summaryText = document.getElementById("summaryText");
+
+  const companyBlocks = Array.from(document.querySelectorAll(".branch-company"));
+
+  function selectedCompanyIds() {
+    return new Set(companyChecks.filter(c => c.checked).map(c => c.value));
+  }
+
+  function syncReplicationVisibility() {
+    const selectedCount = companyChecks.filter(c => c.checked).length;
+    replicationBox.style.display = (selectedCount > 1) ? "block" : "none";
+
+    if (selectedCount <= 1) {
+      const yes = replicationBox.querySelector("input[type=radio][value='1']");
+      if (yes) yes.checked = true;
+    }
+  }
+
+  function syncBranchesVisibility() {
+    const selected = selectedCompanyIds();
+
+    // Mostrar/ocultar accordion entero
+    if (selected.size === 0) {
+      branchesAccordion.classList.add("d-none");
+      branchesEmptyState.classList.remove("d-none");
+
+      // desmarcar sucursales
+      branchChecks().forEach(b => b.checked = false);
+      return;
+    }
+
+    branchesAccordion.classList.remove("d-none");
+    branchesEmptyState.classList.add("d-none");
+
+    // Mostrar solo empresas seleccionadas dentro del accordion
+    companyBlocks.forEach(block => {
+      const id = block.getAttribute("data-company-id");
+      const visible = selected.has(id);
+      block.classList.toggle("d-none", !visible);
+
+      // si ocultamos, desmarcamos sus sucursales para evitar inconsistencias
+      if (!visible) {
+        block.querySelectorAll("input.branch-checkbox").forEach(cb => cb.checked = false);
+      }
+    });
+  }
+
+  function syncSummary() {
+    const companies = companyChecks.filter(c => c.checked).length;
+    const branches = branchChecks().filter(b => b.checked).length;
+
+    if (companies === 0) {
+      summaryText.textContent = "Seleccioná al menos una empresa.";
+      return;
+    }
+
+    if (branches === 0) {
+      summaryText.textContent = `Empresas: ${companies} · Sucursales: (ninguna, acceso a nivel empresa)`;
+      return;
+    }
+
+    summaryText.textContent = `Empresas: ${companies} · Sucursales seleccionadas: ${branches}`;
+  }
+
+  function syncAll() {
+    syncReplicationVisibility();
+    syncBranchesVisibility();
+    syncSummary();
+  }
+
+  companyChecks.forEach(c => c.addEventListener("change", syncAll));
+  clearBranchesBtn.addEventListener("click", () => {
+    branchChecks().forEach(b => b.checked = false);
+    syncSummary();
+  });
+
+  // Primer render
+  syncAll();
+})();
+</script>
+
+<style>
+  /* Píldoras limpias: el checkbox queda alineado y la etiqueta se ve como botón */
+  .company-pill input.form-check-input {
+    pointer-events: none;
+  }
+</style>
+{% endblock %}

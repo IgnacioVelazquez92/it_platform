@@ -1,31 +1,45 @@
-from __future__ import annotations
-
+# src/apps/catalog/views/requests.py
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView
+from django.views.generic import DetailView, TemplateView
 
-from apps.catalog.models.requests import AccessRequest, RequestStatus
-from apps.catalog.models.templates import AccessTemplate
+from apps.catalog.models.requests import AccessRequest
 
 
-class DraftRequestListView(LoginRequiredMixin, ListView):
-    template_name = "catalog/requests/drafts.html"
-    context_object_name = "requests"
-    paginate_by = 25
+class RequestDetailView(LoginRequiredMixin, DetailView):
+    model = AccessRequest
+    template_name = "catalog/request/detail.html"
+    context_object_name = "request_obj"
 
     def get_queryset(self):
         return (
-            AccessRequest.objects
+            super()
+            .get_queryset()
             .select_related("person_data")
-            .prefetch_related("items__selection_set__company", "items__selection_set__branch")
-            .filter(status=RequestStatus.DRAFT)
-            .order_by("-created_at")
+            .prefetch_related(
+                "items__selection_set__company",
+                "items__selection_set__branch",
+                "items__selection_set__modules",
+                "items__selection_set__selected_modules__module",
+                "items__selection_set__warehouses__warehouse",
+                "items__selection_set__cash_registers__cash_register",
+                "items__selection_set__control_panels__control_panel",
+                "items__selection_set__sellers__seller",
+                "items__selection_set__action_values__action_permission",
+                "items__selection_set__matrix_permissions__permission",
+                "items__selection_set__payment_methods__payment_method",
+            )
         )
 
 
-class TemplateListView(LoginRequiredMixin, ListView):
-    template_name = "catalog/requests/templates.html"
-    context_object_name = "templates"
-    paginate_by = 25
+class RequestSubmittedView(LoginRequiredMixin, TemplateView):
+    template_name = "catalog/request/submitted.html"
 
-    def get_queryset(self):
-        return AccessTemplate.objects.select_related("selection_set__company", "selection_set__branch").order_by("name")
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        req = (
+            AccessRequest.objects
+            .select_related("person_data")
+            .get(pk=self.kwargs["pk"])
+        )
+        ctx["request_obj"] = req
+        return ctx

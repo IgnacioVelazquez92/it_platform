@@ -25,3 +25,14 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv(
 
 # WhiteNoise (static)
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
+CATALOG_IT_NOTIFY_EMAILS = ["it@empresa.com", "tu_mail@empresa.com"]
+
+GMAIL_OAUTH_SENDER = "tu_cuenta_google_workspace@empresa.com"
+GMAIL_OAUTH_CLIENT_ID = os.environ.get("GMAIL_OAUTH_CLIENT_ID", "")
+GMAIL_OAUTH_CLIENT_SECRET = os.environ.get("GMAIL_OAUTH_CLIENT_SECRET", "")
+GMAIL_OAUTH_REFRESH_TOKEN = os.environ.get("GMAIL_OAUTH_REFRESH_TOKEN", "")
+
+# Recomendado: esto lo usás para forzar que en PROD se use Gmail API
+USE_GMAIL_OAUTH = True

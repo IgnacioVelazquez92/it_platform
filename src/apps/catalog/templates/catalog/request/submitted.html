@@ -1,0 +1,26 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h3 class="mb-1">Solicitud enviada</h3>
+      <div class="text-muted">
+        La solicitud <span class="fw-semibold">#{{ request_obj.id }}</span> fue enviada al equipo de IT.
+      </div>
+
+      <hr class="my-3">
+
+      <div class="small text-muted mb-3">
+        Persona: <span class="fw-semibold">{{ request_obj.person_data.last_name }}, {{ request_obj.person_data.first_name }}</span>
+        — DNI: <span class="fw-semibold">{{ request_obj.person_data.dni }}</span>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a class="btn btn-primary" href="{% url 'catalog:request_detail' request_obj.id %}">Ver detalle</a>
+        <a class="btn btn-outline-secondary" href="/">Volver al inicio</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,31 +1,39 @@
 from django.urls import path
 
-from .views.requests import DraftRequestListView, TemplateListView
-from .views.wizard import (
-    WizardStep1PersonView,
-    WizardStep2TemplateCompaniesView,
-    WizardStep3BranchesView,
-    WizardStep4ScopedView,
-    WizardStep5GlobalView,
-)
 
+from apps.catalog.views.wizard.step_0_start import WizardStep0StartView
+from apps.catalog.views.wizard.step_1_person import WizardStep1PersonView
+from apps.catalog.views.wizard.step_2_companies import WizardStep2CompaniesView
+from apps.catalog.views.wizard.step_3_modules import WizardStep3ModulesView
+from apps.catalog.views.wizard.step_4_globals import WizardStep4GlobalsView
+from apps.catalog.views.wizard.step_5_scoped import WizardStep5ScopedView
+from apps.catalog.views.wizard.step_6_review import WizardStep6ReviewView
+from apps.catalog.views.requests import RequestSubmittedView, RequestDetailView
+from apps.catalog.views.request_list import RequestListView
 app_name = "catalog"
 
 urlpatterns = [
-    # Listados
-    path("requests/drafts/", DraftRequestListView.as_view(), name="drafts"),
-    path("templates/", TemplateListView.as_view(), name="templates"),
+    path("wizard/start/", WizardStep0StartView.as_view(),
+         name="wizard_step_0_start"),
+    path("wizard/person/", WizardStep1PersonView.as_view(),
+         name="wizard_step_1_person"),
+    path("wizard/companies/", WizardStep2CompaniesView.as_view(),
+         name="wizard_step_2_companies"),
 
-    # Wizard (multi-empresa)
-    path("requests/new/", WizardStep1PersonView.as_view(), name="request_new"),
-    path("requests/<int:request_id>/step/1/",
-         WizardStep1PersonView.as_view(), name="w_step_1"),
-    path("requests/<int:request_id>/step/2/",
-         WizardStep2TemplateCompaniesView.as_view(), name="w_step_2"),
-    path("requests/<int:request_id>/step/3/",
-         WizardStep3BranchesView.as_view(), name="w_step_3"),
-    path("requests/<int:request_id>/step/4/",
-         WizardStep4ScopedView.as_view(), name="w_step_4"),
-    path("requests/<int:request_id>/step/5/",
-         WizardStep5GlobalView.as_view(), name="w_step_5"),
+    path("wizard/modules/", WizardStep3ModulesView.as_view(),
+         name="wizard_step_3_modules"),
+    path("wizard/globals/", WizardStep4GlobalsView.as_view(),
+         name="wizard_step_4_globals"),
+    path("wizard/scoped/", WizardStep5ScopedView.as_view(),
+         name="wizard_step_5_scoped"),
+    path("wizard/review/", WizardStep6ReviewView.as_view(),
+         name="wizard_step_6_review"),
+    path("requests/drafts/", RequestDetailView.as_view(), name="request_drafts"),
+    # confirmación de envío
+    path("requests/<int:pk>/submitted/",
+         RequestSubmittedView.as_view(), name="wizard_submitted"),
+
+    # detalle (para ver/validar/compartir)
+    path("requests/<int:pk>/", RequestDetailView.as_view(), name="request_detail"),
+    path("requests/", RequestListView.as_view(), name="request_list"),
 ]

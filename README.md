@@ -17,28 +17,36 @@ src/
 │  ├─ base/
 │  │  ├─ base.html
 │  │  ├─ _sidebar.html
-│  │  └─ _messages.html
+│  │  ├─ _messages.html
+│  │  ├─ _form_errors.html
+│  │  └─ _form_field.html
 │  ├─ home/
 │  │  └─ dashboard.html
 │  └─ registration/
 │     ├─ login.html
-│     └─ logout_confirm.html
+│     └─ logged_out.html
 ├─ static/
 │  ├─ vendor/
-│  │  ├─ bootstrap/
-│  │  └─ bootstrap-icons/
+│  │  └─ bootstrap/
+│  │     ├─ css/
+│  │     └─ js/
 │  └─ app/
 │     ├─ css/
+│     │  └─ app.css
 │     └─ js/
+│        └─ app.js
 └─ apps/
    ├─ core/
    │  ├─ apps.py
    │  ├─ views.py
    │  ├─ urls.py
+   │  ├─ models.py
    │  └─ migrations/
    └─ catalog/
       ├─ apps.py
       ├─ admin.py
+      ├─ urls.py
+      ├─ views.py
       ├─ admin/
       │  ├─ __init__.py
       │  ├─ modules_admin.py
@@ -51,11 +59,16 @@ src/
       │  └─ person_admin.py
       ├─ forms/
       │  ├─ __init__.py
+      │  ├─ bootstrap_mixins.py
+      │  ├─ helpers.py
+      │  ├─ helpers_globals.py
       │  ├─ person.py
-      │  ├─ scope_modules.py
-      │  ├─ scoped_selections.py
-      │  ├─ global_permissions.py
-      │  └─ helpers.py
+      │  ├─ start.py
+      │  ├─ step_2_companies.py
+      │  ├─ step_3_modules.py
+      │  ├─ step_4_globals.py
+      │  ├─ step_5_scoped.py
+      │  └─ visibility.py
       ├─ models/
       │  ├─ __init__.py
       │  ├─ person.py
@@ -63,100 +76,189 @@ src/
       │  ├─ templates.py
       │  ├─ selections.py
       │  ├─ modules.py
-      │  ├─ permissions/
-      │  │  ├─ __init__.py
-      │  │  ├─ scoped.py
-      │  │  └─ global_ops.py
-      │  └─ rules.py
+      │  ├─ rules.py
+      │  └─ permissions/
+      │     ├─ __init__.py
+      │     ├─ scoped.py
+      │     ├─ global_ops.py
+      │     └─ assignments.py
       ├─ views/
-      │  └─ __init__.py
-      ├─ migrations/
-      └─ management/
-         ├─ __init__.py
-         └─ commands/
-            ├─ __init__.py
-            ├─ import_modules_from_excel.py
-            ├─ import_scoped_from_excel.py
-            ├─ import_action_permissions_from_excel.py
-            └─ bootstrap_visibility_rules.py
+      │  ├─ __init__.py
+      │  ├─ requests.py
+      │  ├─ wizard.py
+      │  └─ wizard/
+      │     └─ step_5_scoped.py
+      ├─ templates/
+      │  └─ catalog/
+      │     ├─ requests/
+      │     ├─ template_pick/
+      │     ├─ wizard/
+      │     │  ├─ _progress.html
+      │     │  ├─ step_1_person.html
+      │     │  ├─ step_2_template_companies.html
+      │     │  ├─ step_3_branches.html
+      │     │  ├─ step_4_globals.html
+      │     │  ├─ step_5_global.html
+      │     │  └─ step_5_scoped.html
+      │     └─ request/
+      │        └─ drafts.html
+      ├─ management/
+      │  ├─ __init__.py
+      │  └─ commands/
+      │     ├─ __init__.py
+      │     ├─ import_modules_from_excel.py
+      │     ├─ import_scoped_from_excel.py
+      │     ├─ import_action_permissions_from_excel.py
+      │     └─ bootstrap_visibility_rules.py
+      └─ migrations/
 ```
 
 ---
 
-## Descripción breve por archivo
-
-### templates/base
-
-- `base.html`  
-  Layout base global con Bootstrap y bloques de extensión.
-
-- `_sidebar.html`  
-  Sidebar principal de navegación de la plataforma.
-
-- `_messages.html`  
-  Render centralizado de mensajes de Django.
-
----
-
-### templates/home
-
-- `dashboard.html`  
-  Home protegido de la plataforma (hub inicial).
-
----
-
-### templates/registration
-
-- `login.html`  
-  Login usando autenticación nativa de Django.
-
-- `logout_confirm.html`  
-  Pantalla de confirmación previa al logout (GET).
-
----
-
-### static
-
-- `vendor/bootstrap/`  
-  Assets locales de Bootstrap (CSS/JS).
-
-- `vendor/bootstrap-icons/`  
-  Iconos Bootstrap usados en la UI.
-
-- `app/css`  
-  Estilos propios de la plataforma.
-
-- `app/js`  
-  Scripts propios de la plataforma.
-
----
-
-### apps/core
-
-- `apps.py`  
-  Configuración de la app core de la plataforma.
-
-- `views.py`  
-  Vistas transversales (`HomeDashboardView`, `LogoutConfirmView`).
-
-- `urls.py`  
-  URLs base (home, login, logout).
-
----
+## Descripciones por archivo
 
 ### apps/catalog/forms
 
-- `person.py`  
-  Formulario de carga de `RequestPersonData`.
-
-- `scope_modules.py`  
-  Formulario de selección de empresa, sucursal y módulos.
-
-- `scoped_selections.py`  
-  Formulario de selecciones scoped dependientes de company/branch.
-
-- `global_permissions.py`  
-  Formsets de permisos globales (acciones, matriz, medios de pago).
+- `bootstrap_mixins.py`  
+  BootstrapFormMixin: renderizado automático de forms con clases Bootstrap.
 
 - `helpers.py`  
-  Helpers reutilizables de validación y sincronización de selecciones.
+  Funciones de validación y sincronización de selecciones (sync_through_rows, ensure_global_rows_exist).
+
+- `helpers_globals.py`  
+  Helpers para permisos globales y replicación entre selection_sets (replicate_globals).
+
+- `person.py`  
+  RequestPersonDataForm: datos de solicitante.
+
+- `start.py`  
+  StartForm: selección de plantilla inicial.
+
+- `step_2_companies.py`  
+  TemplateCompaniesForm: empresas y flag same_modules_for_all.
+
+- `step_3_modules.py`  
+  SelectionSetModulesForm: selección de módulos por empresa.
+
+- `step_4_globals.py`  
+  SelectionSetScopeModulesForm, SelectionSetScopedSelectionsForm: scopes globales.
+
+- `step_5_scoped.py`  
+  CompanyScopedForm, BranchScopedForm: paneles, vendedores, depósitos, cajas por empresa/sucursal. NoValidationMultipleChoiceField para validación en clean\_\*.
+
+- `visibility.py`  
+  VisibilityRulesForm: reglas de visibilidad de módulos.
+
+### apps/catalog/models
+
+- `person.py`  
+  RequestPersonData: datos personales del solicitante.
+
+- `requests.py`  
+  AccessRequest, AccessRequestItem: solicitudes de acceso con flag same_modules_for_all.
+
+- `templates.py`  
+  SelectionTemplate, SelectionTemplateModule: plantillas reutilizables.
+
+- `selections.py`  
+  PermissionSelectionSet, SelectionSetModule, SelectionSetLevel, SelectionSetSublevel: scopes y módulos.
+
+- `modules.py`  
+  Module, ModuleAction: módulos del sistema y acciones.
+
+- `rules.py`  
+  ModuleVisibilityRule: visibilidad condicional de módulos.
+
+- `permissions/scoped.py`  
+  Company, Branch, Warehouse, CashRegister, ControlPanel, Seller: entidades de scope (empresa/sucursal/depósito/caja/panel/vendedor).
+
+- `permissions/global_ops.py`  
+  ActionPermission, MatrixPermission, PaymentMethod: permisos globales.
+
+- `permissions/assignments.py`  
+  SelectionSetControlPanel, SelectionSetSeller, SelectionSetWarehouse, SelectionSetCashRegister: asignaciones de scope a selection_set.
+
+### apps/catalog/views
+
+- `wizard.py`  
+  WizardStep1PersonView, WizardStep2CompaniesView, WizardStep3ModulesView, WizardStep4GlobalsView, WizardStep5GlobalView: flujo de wizard multi-paso.
+
+- `wizard/step_5_scoped.py`  
+  WizardStep5ScopedView: asignación de paneles, vendedores, depósitos, cajas por empresa/sucursal.
+
+- `requests.py`  
+  AccessRequestListView, AccessRequestDetailView: gestión de solicitudes.
+
+### apps/catalog/admin
+
+- `person_admin.py`  
+  RequestPersonDataAdmin.
+
+- `requests_admin.py`  
+  AccessRequestAdmin, AccessRequestItemAdmin.
+
+- `templates_admin.py`  
+  SelectionTemplateAdmin, SelectionTemplateModuleAdmin.
+
+- `selections_admin.py`  
+  PermissionSelectionSetAdmin, SelectionSetModuleAdmin, SelectionSetLevelAdmin, SelectionSetSublevelAdmin.
+
+- `modules_admin.py`  
+  ModuleAdmin, ModuleActionAdmin.
+
+- `rules_admin.py`  
+  ModuleVisibilityRuleAdmin.
+
+- `scoped_admin.py`  
+  CompanyAdmin, BranchAdmin, WarehouseAdmin, CashRegisterAdmin, ControlPanelAdmin, SellerAdmin.
+
+- `global_ops_admin.py`  
+  ActionPermissionAdmin, MatrixPermissionAdmin, PaymentMethodAdmin, SelectionSetControlPanelAdmin, SelectionSetSellerAdmin, SelectionSetWarehouseAdmin, SelectionSetCashRegisterAdmin.
+
+### apps/catalog/management/commands
+
+- `import_modules_from_excel.py`  
+  Importa módulos desde Excel.
+
+- `import_scoped_from_excel.py`  
+  Importa entidades de scope (companies, branches, warehouses, cash registers, control panels, sellers) desde Excel.
+
+- `import_action_permissions_from_excel.py`  
+  Importa permisos de acciones desde Excel.
+
+- `bootstrap_visibility_rules.py`  
+  Crea reglas de visibilidad predeterminadas.
+
+### templates/catalog/wizard
+
+- `_progress.html`  
+  Barra de progreso del wizard.
+
+- `step_1_person.html`  
+  Carga de datos personales.
+
+- `step_2_template_companies.html`  
+  Selección de plantilla, empresas e indicador de módulos compartidos.
+
+- `step_3_branches.html`  
+  Selección de sucursales por empresa.
+
+- `step_4_globals.html`  
+  Permisos globales (acciones, matriz, medios de pago).
+
+- `step_5_global.html`  
+  Módulos globales compartidos o por empresa (solo render, formularios en wizard.py).
+
+- `step_5_scoped.html`  
+  Paneles, vendedores, depósitos, cajas por empresa/sucursal (accordion).
+
+### apps/core
+
+- `views.py`  
+  HomeDashboardView, LogoutConfirmView.
+
+- `urls.py`  
+  Rutas base (home, login, logout).
+
+- `models.py`  
+  Modelos transversales (si aplican).

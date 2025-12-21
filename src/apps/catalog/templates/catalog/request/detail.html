@@ -1,0 +1,45 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1100px;">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h3 class="mb-0">Solicitud #{{ request_obj.id }}</h3>
+      <div class="text-muted">Estado: {{ request_obj.get_status_display }} — Tipo: {{ request_obj.get_kind_display }}</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="/">Volver</a>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="mb-2">Datos de la persona</h5>
+      <div class="row small">
+        <div class="col-md-6"><span class="text-muted">Nombre:</span> <span class="fw-semibold">{{ request_obj.person_data.last_name }}, {{ request_obj.person_data.first_name }}</span></div>
+        <div class="col-md-6"><span class="text-muted">DNI:</span> <span class="fw-semibold">{{ request_obj.person_data.dni }}</span></div>
+        <div class="col-md-6"><span class="text-muted">Email:</span> <span class="fw-semibold">{{ request_obj.person_data.email }}</span></div>
+        <div class="col-md-6"><span class="text-muted">Celular:</span> <span class="fw-semibold">{{ request_obj.person_data.mobile_phone }}</span></div>
+        <div class="col-md-6"><span class="text-muted">Puesto:</span> <span class="fw-semibold">{{ request_obj.person_data.job_title }}</span></div>
+        <div class="col-md-6"><span class="text-muted">Jefe directo:</span> <span class="fw-semibold">{{ request_obj.person_data.direct_manager }}</span></div>
+      </div>
+
+      <hr class="my-3">
+
+      <h5 class="mb-2">Empresas / Sucursales</h5>
+      <div class="small">
+        {% for it in request_obj.items.all %}
+          <div class="border rounded p-2 mb-2">
+            <div class="fw-semibold">{{ it.selection_set.company.name }}</div>
+            {% if it.selection_set.branch %}
+              <div class="text-muted">Sucursal: {{ it.selection_set.branch.name }}</div>
+            {% else %}
+              <div class="text-muted">Sin sucursal</div>
+            {% endif %}
+          </div>
+        {% empty %}
+          <div class="text-muted">Sin ítems.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

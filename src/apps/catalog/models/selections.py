@@ -22,6 +22,8 @@ from .permissions.global_ops import (
     PaymentMethodPermission,
 )
 
+from .modules import ErpModule, ErpModuleSubLevel
+
 
 class PermissionSelectionSet(models.Model):
     """
@@ -84,6 +86,42 @@ class SelectionSetModule(models.Model):
 
     def __str__(self) -> str:
         return f"{self.selection_set_id} -> {self.module}"
+
+
+class SelectionSetLevel(models.Model):
+    selection_set = models.ForeignKey(
+        PermissionSelectionSet, on_delete=models.CASCADE, related_name="selected_levels"
+    )
+    level = models.ForeignKey("catalog.ErpModuleLevel",
+                              on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["selection_set", "level"], name="uniq_selection_level"),
+        ]
+
+
+class SelectionSetSubLevel(models.Model):
+    selection_set = models.ForeignKey(
+        PermissionSelectionSet, on_delete=models.CASCADE, related_name="sublevels"
+    )
+    sublevel = models.ForeignKey(ErpModuleSubLevel, on_delete=models.PROTECT)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Subnivel seleccionado"
+        verbose_name_plural = "Subniveles seleccionados"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["selection_set", "sublevel"], name="uniq_selection_sublevel"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.selection_set_id} -> {self.sublevel}"
 
 
 # -------------------------------------------------

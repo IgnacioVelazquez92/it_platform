@@ -1,0 +1,88 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 880px;">
+  {% include "catalog/wizard/_progress.html" with step=0 total_steps=5 progress_percent=0 request_obj=None %}
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h3 class="mb-1">Nuevo ABM</h3>
+      <div class="text-muted">Elegí cómo querés iniciar la solicitud.</div>
+    </div>
+  </div>
+
+  <form method="post" class="card shadow-sm">
+    {% csrf_token %}
+
+    <div class="card-body">
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger mb-3">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">{{ form.start_mode.label }}</label>
+
+        <div class="d-grid gap-2">
+          {% for radio in form.start_mode %}
+            <label class="border rounded p-3 d-flex gap-2 align-items-start">
+              <div class="pt-1">{{ radio.tag }}</div>
+              <div>
+                <div class="fw-semibold">{{ radio.choice_label }}</div>
+                {% if radio.data.value == "TEMPLATE" %}
+                  <div class="text-muted small">
+                    Recomendado si ya existe un perfil similar. Luego podés ajustar en los pasos.
+                  </div>
+                {% else %}
+                  <div class="text-muted small">
+                    Ideal cuando el acceso es especial o no existe un perfil base.
+                  </div>
+                {% endif %}
+              </div>
+            </label>
+          {% endfor %}
+        </div>
+
+        {% if form.start_mode.errors %}
+          <div class="text-danger small mt-2">{{ form.start_mode.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div id="templateBox" class="mt-3">
+        <div class="p-3 bg-body-tertiary rounded">
+          <label class="form-label fw-semibold">{{ form.template.label }}</label>
+          {{ form.template }}
+
+          {% if form.template.errors %}
+            <div class="invalid-feedback d-block mt-2">{{ form.template.errors|striptags }}</div>
+          {% endif %}
+
+          <div class="text-muted small mt-2">
+            Consejo: usá templates para roles repetitivos (ej: Analista de Compras) y ganás velocidad sin perder control.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-end gap-2">
+      <a class="btn btn-outline-secondary" href="/">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Continuar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function () {
+    const templateBox = document.getElementById("templateBox");
+    const radios = document.querySelectorAll("input[name='start_mode']");
+    function sync() {
+      const val = document.querySelector("input[name='start_mode']:checked")?.value;
+      templateBox.style.display = (val === "TEMPLATE") ? "block" : "none";
+    }
+    radios.forEach(r => r.addEventListener("change", sync));
+    sync();
+  })();
+</script>
+{% endblock %}

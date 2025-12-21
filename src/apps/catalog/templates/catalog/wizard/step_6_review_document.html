@@ -1,0 +1,319 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Solicitud de alta — #{{ request_obj.id }}</title>
+
+  <!-- Bootstrap local -->
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+
+  <style>
+    :root { --doc-muted: #6c757d; }
+
+    body { background: #f6f7f9; }
+    .doc-wrap { max-width: 980px; }
+    .doc-paper {
+      background: #fff;
+      border: 1px solid #e6e6e6;
+      border-radius: 14px;
+      box-shadow: 0 10px 22px rgba(0,0,0,.06);
+      padding: 28px;
+    }
+    .doc-title { letter-spacing: .2px; }
+    .doc-muted { color: var(--doc-muted); }
+    .doc-hr { border-top: 1px solid #e9ecef; margin: 18px 0; }
+
+    .kv dt { color: var(--doc-muted); font-weight: 600; }
+    .kv dd { margin-bottom: .25rem; }
+
+    .badge-soft {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      color: #212529;
+      font-weight: 600;
+    }
+
+    .table thead th { font-size: .85rem; }
+    .table td, .table th { vertical-align: middle; }
+
+    .section-title {
+      font-weight: 700;
+      margin: 0 0 .35rem 0;
+    }
+    .section-sub {
+      color: var(--doc-muted);
+      font-size: .9rem;
+    }
+
+    /* Impresión */
+    @media print {
+      body { background: #fff; }
+      .no-print { display: none !important; }
+      .doc-paper { border: 0; box-shadow: none; padding: 0; }
+      .page-break { page-break-before: always; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container py-4 doc-wrap">
+    <div class="d-flex align-items-center justify-content-between mb-3 no-print">
+      <a href="{% url 'catalog:wizard_step_5_scoped' %}" class="btn btn-outline-secondary btn-sm">Atrás</a>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()">Imprimir</button>
+        <form method="post" class="m-0">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm">Enviar solicitud</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="doc-paper">
+      <!-- Header -->
+      <div class="d-flex align-items-start justify-content-between gap-3">
+        <div>
+          <div class="doc-muted small">IT Platform — Solicitud</div>
+          <h3 class="doc-title mb-1">Solicitud de alta / modificación de usuario</h3>
+        </div>
+        <div class="text-end doc-muted small">
+          Creada: {{ request_obj.created_at|date:"d/m/Y H:i" }}
+          <br>
+          Últ. actualización: {{ request_obj.updated_at|date:"d/m/Y H:i" }}
+        </div>
+      </div>
+
+      <div class="doc-hr"></div>
+
+      <!-- Persona -->
+      <div class="mb-2">
+        <div class="section-title">Datos del usuario</div>
+        <div class="section-sub">Información cargada en la solicitud.</div>
+      </div>
+
+      <dl class="row kv mb-0">
+        <dt class="col-4 col-md-3">Apellido y nombre</dt>
+        <dd class="col-8 col-md-9">{{ request_obj.person_data.last_name }}, {{ request_obj.person_data.first_name }}</dd>
+
+        <dt class="col-4 col-md-3">DNI</dt>
+        <dd class="col-8 col-md-9">{{ request_obj.person_data.dni }}</dd>
+
+        <dt class="col-4 col-md-3">Email</dt>
+        <dd class="col-8 col-md-9">{{ request_obj.person_data.email }}</dd>
+
+        <dt class="col-4 col-md-3">Celular</dt>
+        <dd class="col-8 col-md-9">{{ request_obj.person_data.mobile_phone }}</dd>
+
+        <dt class="col-4 col-md-3">Puesto</dt>
+        <dd class="col-8 col-md-9">{{ request_obj.person_data.job_title }}</dd>
+
+        <dt class="col-4 col-md-3">Jefe directo</dt>
+        <dd class="col-8 col-md-9">{{ request_obj.person_data.direct_manager }}</dd>
+      </dl>
+
+      <div class="doc-hr"></div>
+
+      <!-- Alcance -->
+      <div class="mb-2">
+        <div class="section-title">Alcance</div>
+        <div class="section-sub">Empresas y sucursales solicitadas.</div>
+      </div>
+
+      <ul class="mb-0">
+        {% for b in blocks %}
+          <li>
+            <span class="fw-semibold">{{ b.company.name }}</span>
+            {% if b.branch %}<span class="doc-muted">/ {{ b.branch.name }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      <div class="doc-hr"></div>
+
+      <!-- Detalle por empresa/sucursal -->
+      <div class="mb-2">
+        <div class="section-title">Detalle de accesos</div>
+        <div class="section-sub">Accesos otorgados por empresa/sucursal.</div>
+      </div>
+
+      {% for b in blocks %}
+        {% if not forloop.first %}
+          <div class="doc-hr"></div>
+        {% endif %}
+
+        <div class="d-flex align-items-start justify-content-between gap-3">
+          <div>
+            <h5 class="mb-1">
+              {{ b.company.name }}
+              {% if b.branch %}<span class="doc-muted">/ {{ b.branch.name }}</span>{% endif %}
+            </h5>
+            <div class="doc-muted small">
+              SelectionSet #{{ b.selection_set.id }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Módulos -->
+        <div class="mt-3">
+          <div class="fw-semibold">Módulos y permisos</div>
+          {% if b.payload.modules %}
+            <div class="d-flex flex-wrap gap-2 mt-2">
+              {% for m in b.payload.modules %}
+                <span class="badge badge-soft">{{ m.name }}</span>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="doc-muted small mt-1">— Sin módulos seleccionados.</div>
+          {% endif %}
+
+          {# FUTURO: si persistís niveles/subniveles, acá va un árbol sin JS #}
+          {% if b.payload.levels_tree %}
+            <div class="mt-2 small">
+              <!-- render árbol -->
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Scoped -->
+        <div class="row g-3 mt-3">
+          <div class="col-md-6">
+            <div class="fw-semibold">Scoped (por empresa/sucursal)</div>
+
+            <div class="mt-2">
+              <div class="doc-muted small fw-semibold">Depósitos</div>
+              {% if b.payload.warehouses %}
+                <ul class="mb-0">
+                  {% for x in b.payload.warehouses %}<li>{{ x.name }}</li>{% endfor %}
+                </ul>
+              {% else %}
+                <div class="doc-muted small">—</div>
+              {% endif %}
+            </div>
+
+            <div class="mt-2">
+              <div class="doc-muted small fw-semibold">Cajas</div>
+              {% if b.payload.cash_registers %}
+                <ul class="mb-0">
+                  {% for x in b.payload.cash_registers %}<li>{{ x.name }}</li>{% endfor %}
+                </ul>
+              {% else %}
+                <div class="doc-muted small">—</div>
+              {% endif %}
+            </div>
+
+            <div class="mt-2">
+              <div class="doc-muted small fw-semibold">Paneles</div>
+              {% if b.payload.control_panels %}
+                <ul class="mb-0">
+                  {% for x in b.payload.control_panels %}<li>{{ x.name }}</li>{% endfor %}
+                </ul>
+              {% else %}
+                <div class="doc-muted small">—</div>
+              {% endif %}
+            </div>
+
+            <div class="mt-2">
+              <div class="doc-muted small fw-semibold">Vendedores</div>
+              {% if b.payload.sellers %}
+                <ul class="mb-0">
+                  {% for x in b.payload.sellers %}<li>{{ x.name }}</li>{% endfor %}
+                </ul>
+              {% else %}
+                <div class="doc-muted small">—</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Globales -->
+          <div class="col-md-6">
+            <div class="fw-semibold">Permisos globales</div>
+
+            <div class="mt-2">
+              <div class="doc-muted small fw-semibold">Acciones</div>
+              {% if b.payload.actions_by_group %}
+                {% for g, rows in b.payload.actions_by_group.items %}
+                  <div class="mt-2">
+                    <div class="fw-semibold small">{{ g }}</div>
+                    <ul class="mb-0">
+                      {% for name, val in rows %}
+                        <li>
+                          <span class="fw-semibold">{{ name }}</span>
+                          {% if val %}<span class="doc-muted"> — {{ val }}</span>{% endif %}
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="doc-muted small">—</div>
+              {% endif %}
+            </div>
+
+            <div class="mt-3">
+              <div class="doc-muted small fw-semibold">Medios de pago habilitados</div>
+              {% if b.payload.payment_methods %}
+                <ul class="mb-0">
+                  {% for pm in b.payload.payment_methods %}<li>{{ pm.name }}</li>{% endfor %}
+                </ul>
+              {% else %}
+                <div class="doc-muted small">—</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Matriz -->
+        <div class="mt-3">
+          <div class="fw-semibold">Matriz de permisos (solo filas con checks)</div>
+          {% if b.payload.matrix %}
+            <div class="table-responsive border rounded mt-2">
+              <table class="table table-sm mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Permiso</th>
+                    <th class="text-center">Crear</th>
+                    <th class="text-center">Modificar</th>
+                    <th class="text-center">Autorizar</th>
+                    <th class="text-center">Cerrar</th>
+                    <th class="text-center">Anular</th>
+                    <th class="text-center">Actualiza vigencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in b.payload.matrix %}
+                    <tr>
+                      <td class="fw-semibold">{{ r.permission.name }}</td>
+                      <td class="text-center">{% if r.can_create %}✔{% endif %}</td>
+                      <td class="text-center">{% if r.can_update %}✔{% endif %}</td>
+                      <td class="text-center">{% if r.can_authorize %}✔{% endif %}</td>
+                      <td class="text-center">{% if r.can_close %}✔{% endif %}</td>
+                      <td class="text-center">{% if r.can_cancel %}✔{% endif %}</td>
+                      <td class="text-center">{% if r.can_update_validity %}✔{% endif %}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="doc-muted small mt-1">—</div>
+          {% endif %}
+        </div>
+
+      {% endfor %}
+
+      {% if request_obj.notes %}
+        <div class="doc-hr"></div>
+        <div class="section-title">Notas</div>
+        <div class="small">{{ request_obj.notes|linebreaksbr }}</div>
+      {% endif %}
+
+      <div class="doc-hr"></div>
+
+    </div>
+  </div>
+
+  <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+</body>
+</html>
