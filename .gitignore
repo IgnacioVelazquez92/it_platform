@@ -1,0 +1,80 @@
+# =============================================================================
+# DJANGO - .gitignore Profesional
+# =============================================================================
+
+### Django ###
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+# Si usas un sistema de almacenamiento de archivos local:
+uploads/
+
+### Entornos Virtuales (Personalizado para tu .venv) ###
+.venv/
+venv/
+ENV/
+env/
+python/
+
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+### Variables de Entorno (¡CRÍTICO!) ###
+.env
+.flaskenv
+*.env
+.venv.env
+
+### Testing / Cobertura ###
+htmlcov/
+.tox/
+.nosetests/
+.pytest_cache/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+.cache
+
+### Jupyter Notebook ###
+.ipynb_checkpoints
+
+### IDEs (VS Code, PyCharm, etc) ###
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+### Otros ###
+*.bak
+*.sql
+*.zip
+*.tar.gz

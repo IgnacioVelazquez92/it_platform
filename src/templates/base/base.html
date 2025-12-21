@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}IT Platform{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}">
+    <!-- App CSS -->
+    <link rel="stylesheet" href="{% static 'app/css/app.css' %}">
+
+    <style>
+        body {
+            min-height: 100vh;
+        }
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        .content {
+            flex: 1;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="layout">
+
+    {% include "base/_sidebar.html" %}
+
+    <main class="content">
+        {% include "base/_messages.html" %}
+        {% block content %}{% endblock %}
+    </main>
+
+</div>
+
+<script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'app/js/app.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

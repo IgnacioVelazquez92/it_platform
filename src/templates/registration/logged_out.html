@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sesión cerrada | IT Platform</title>
+
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}">
+</head>
+<body class="bg-light">
+
+<div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height: 100vh;">
+        <div class="col-12 col-sm-10 col-md-6 col-lg-4">
+
+            <div class="card shadow-sm text-center">
+                <div class="card-body p-4">
+
+                    <div class="mb-3">
+                        <i class="bi bi-check-circle text-success" style="font-size: 2.5rem;"></i>
+                    </div>
+
+                    <h5 class="mb-2">Sesión cerrada</h5>
+
+                    <p class="text-muted mb-4">
+                        Cerraste sesión correctamente.<br>
+                        Gracias por usar IT Platform.
+                    </p>
+
+                    <a href="{% url 'login' %}" class="btn btn-primary w-100">
+                        Volver a iniciar sesión
+                    </a>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+</body>
+</html>

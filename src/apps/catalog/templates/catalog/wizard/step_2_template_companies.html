@@ -1,0 +1,115 @@
+{% extends "base/base.html" %}
+{% block title %}Paso 2 | Template y empresas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  {% include "catalog/wizard/_progress.html" %}
+
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="mb-3">
+            <i class="bi bi-gear"></i> Modelo y empresas
+          </h5>
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <strong>Error:</strong>
+                {% for error in form.non_field_errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endif %}
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.kind.id_for_label }}">
+                {{ form.kind.label }}
+                {% if form.kind.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {% if form.kind.errors %}
+                {{ form.kind }}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.kind.errors %}
+                    <div>{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                {{ form.kind }}
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.template.id_for_label }}">
+                {{ form.template.label }}
+              </label>
+              {% if form.template.errors %}
+                {{ form.template }}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.template.errors %}
+                    <div>{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                {{ form.template }}
+              {% endif %}
+              <div class="form-text">Si elegís un template, se precarga el set global para todas las empresas.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.companies.id_for_label }}">
+                {{ form.companies.label }}
+                {% if form.companies.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              <div class="border rounded p-3 bg-light">
+                {% for checkbox in form.companies %}
+                  <div class="form-check">
+                    {{ checkbox.tag }}
+                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                      {{ checkbox.choice_label }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+              {% if form.companies.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.companies.errors %}
+                    <div>{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              {% if form.companies.help_text %}
+                <div class="form-text">{{ form.companies.help_text|safe }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Guardar y continuar
+              </button>
+              <a href="{% url 'catalog:w_step_1' request_obj.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="alert alert-info">
+        <div class="fw-semibold mb-1">
+          <i class="bi bi-info-circle"></i> Objetivo
+        </div>
+        <div class="small">
+          Vas a cargar permisos globales una sola vez y luego completar scopes por empresa.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

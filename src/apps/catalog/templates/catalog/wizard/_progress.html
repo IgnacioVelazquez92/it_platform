@@ -1,0 +1,8 @@
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div class="fw-semibold">Solicitud #{{ request_obj.id }} — {{ request_obj.get_kind_display }}</div>
+  <div class="text-muted small">Paso {{ step }} de 5</div>
+</div>
+
+<div class="progress mb-4" style="height: 10px;">
+  <div class="progress-bar" role="progressbar" style="width: {{ step|add:"0" }}0%;"></div>
+</div>

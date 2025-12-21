@@ -1,0 +1,40 @@
+/* =============================================================================
+   APP.CSS - Estilos mínimos complementarios para PharmaCenter IT Platform
+   Solo ajustes necesarios que complementan Bootstrap 5
+   ============================================================================= */
+
+/* Layout básico */
+body {
+    min-height: 100vh;
+}
+
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.content {
+    flex: 1;
+    padding: 1.5rem;
+    background-color: #f8f9fa;
+}
+
+/* Mejora visual para checkboxes en grupos */
+.form-check {
+    padding-left: 1.5rem;
+}
+
+.form-check-input {
+    cursor: pointer;
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .content {
+        padding: 1rem;
+    }
+}

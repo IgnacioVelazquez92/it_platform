@@ -1,0 +1,44 @@
+<aside class="sidebar d-flex flex-column bg-dark text-white" style="width:260px;">
+    <div class="p-3 border-bottom border-secondary fw-semibold">
+        <i class="bi bi-shield-lock me-2"></i>
+        IT Platform
+    </div>
+
+    <nav class="nav nav-pills flex-column mt-2">
+
+        <a href="{% url 'catalog:request_new' %}" class="nav-link text-secondary">
+            <i class="bi bi-plus-circle me-2"></i>
+            Nueva solicitud
+        </a>
+
+        <a href="{% url 'catalog:drafts' %}" class="nav-link text-secondary">
+            <i class="bi bi-pencil-square me-2"></i>
+            Borradores
+        </a>
+
+        <a href="{% url 'catalog:templates' %}" class="nav-link text-secondary">
+            <i class="bi bi-file-earmark-text me-2"></i>
+            Templates
+        </a>
+
+
+        <hr class="text-secondary my-3">
+
+        <form method="post" action="{% url 'logout' %}" class="px-2 mt-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-link nav-link text-secondary w-100 text-start">
+                <i class="bi bi-box-arrow-right me-2"></i>
+                Cerrar sesión
+            </button>
+        </form>
+
+    </nav>
+</aside>
+
+<style>
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+        color: #fff !important;
+        background-color: #343a40;
+    }
+</style>

@@ -1,0 +1,63 @@
+{% extends "base/base.html" %}
+{% block title %}Paso 1 | Persona{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <h4 class="mb-3">Nueva solicitud — Datos de persona</h4>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>Error:</strong>
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endif %}
+
+        <div class="row g-3">
+          {% for field in form %}
+            {% if field.field.widget.input_type != 'hidden' %}
+              <div class="col-md-6">
+                <label class="form-label" for="{{ field.id_for_label }}">
+                  {{ field.label }}
+                  {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% if field.errors %}
+                  {{ field }}
+                  <div class="invalid-feedback d-block">
+                    {% for error in field.errors %}
+                      <div>{{ error }}</div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  {{ field }}
+                {% endif %}
+                {% if field.help_text %}
+                  <small class="form-text text-muted d-block mt-1">{{ field.help_text|safe }}</small>
+                {% endif %}
+              </div>
+            {% else %}
+              {{ field }}
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> Guardar y continuar
+          </button>
+          <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle"></i> Cancelar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
