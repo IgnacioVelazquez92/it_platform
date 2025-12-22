@@ -142,7 +142,7 @@ class WizardStep2CompaniesView(WizardBaseView):
                     continue
                 if ss.request_items.exists():
                     continue
-                if ss.templates.exists():
+                if ss.templates_legacy.exists() or ss.template_items.exists():
                     continue
                 ss.delete()
 
