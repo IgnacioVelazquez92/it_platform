@@ -10,6 +10,9 @@ from apps.catalog.views.wizard.step_5_scoped import WizardStep5ScopedView
 from apps.catalog.views.wizard.step_6_review import WizardStep6ReviewView
 from apps.catalog.views.requests import RequestSubmittedView, RequestDetailView
 from apps.catalog.views.request_list import RequestListView
+from apps.catalog.views.request_templates import RequestMakeTemplateView
+
+
 app_name = "catalog"
 
 urlpatterns = [
@@ -36,4 +39,10 @@ urlpatterns = [
     # detalle (para ver/validar/compartir)
     path("requests/<int:pk>/", RequestDetailView.as_view(), name="request_detail"),
     path("requests/", RequestListView.as_view(), name="request_list"),
+
+    path(
+        "requests/<int:request_id>/make-template/",
+        RequestMakeTemplateView.as_view(),
+        name="request_make_template",
+    ),
 ]

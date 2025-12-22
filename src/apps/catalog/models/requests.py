@@ -6,6 +6,7 @@ from django.db import models
 
 from .person import RequestPersonData
 from .selections import PermissionSelectionSet
+from django.conf import settings
 
 
 class RequestKind(models.TextChoices):
@@ -44,6 +45,12 @@ class AccessRequest(models.Model):
 
     person_data = models.ForeignKey(
         RequestPersonData, on_delete=models.PROTECT, related_name="requests"
+    )
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="access_requests",
     )
 
     # Compatibilidad: el modelo original tenía un único selection_set.

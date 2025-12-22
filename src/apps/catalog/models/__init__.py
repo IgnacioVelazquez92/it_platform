@@ -41,7 +41,7 @@ from .selections import (
 
 from .requests import AccessRequest, AccessRequestItem
 
-from .templates import AccessTemplate
+from .templates import AccessTemplate, AccessTemplateItem
 
 
 __all__ = [
@@ -86,4 +86,5 @@ __all__ = [
     "AccessRequest",
     "AccessRequestItem",
     "AccessTemplate",
+    "AccessTemplateItem",
 ]

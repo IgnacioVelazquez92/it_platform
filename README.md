@@ -85,21 +85,30 @@ src/
       ├─ views/
       │  ├─ __init__.py
       │  ├─ requests.py
-      │  ├─ wizard.py
+      │  ├─ request_list.py
       │  └─ wizard/
-      │     └─ step_5_scoped.py
+      │     ├─ __init__.py
+      │     ├─ base.py
+      │     ├─ step_0_start.py
+      │     ├─ step_1_person.py
+      │     ├─ step_2_companies.py
+      │     ├─ step_3_modules.py
+      │     ├─ step_4_globals.py
+      │     ├─ step_5_scoped.py
+      │     └─ step_6_review.py
       ├─ templates/
       │  └─ catalog/
       │     ├─ requests/
       │     ├─ template_pick/
       │     ├─ wizard/
       │     │  ├─ _progress.html
+      │     │  ├─ step_0_start.html
       │     │  ├─ step_1_person.html
-      │     │  ├─ step_2_template_companies.html
-      │     │  ├─ step_3_branches.html
+      │     │  ├─ step_2_companies.html
+      │     │  ├─ step_3_modules.html
       │     │  ├─ step_4_globals.html
-      │     │  ├─ step_5_global.html
-      │     │  └─ step_5_scoped.html
+      │     │  ├─ step_5_scoped.html
+      │     │  └─ step_6_review_document.html
       │     └─ request/
       │        └─ drafts.html
       ├─ management/
@@ -180,14 +189,35 @@ src/
 
 ### apps/catalog/views
 
-- `wizard.py`  
-  WizardStep1PersonView, WizardStep2CompaniesView, WizardStep3ModulesView, WizardStep4GlobalsView, WizardStep5GlobalView: flujo de wizard multi-paso.
+- `wizard/base.py`  
+  WizardBaseView: clase base del wizard con gestión de sesión y contexto.
+
+- `wizard/step_0_start.py`  
+  WizardStep0StartView: selección de modo (desde plantilla o desde cero) y plantilla inicial.
+
+- `wizard/step_1_person.py`  
+  WizardStep1PersonView: datos personales del solicitante.
+
+- `wizard/step_2_companies.py`  
+  WizardStep2CompaniesView: empresas, sucursales y flag same_modules_for_all.
+
+- `wizard/step_3_modules.py`  
+  WizardStep3ModulesView: selección de módulos por empresa.
+
+- `wizard/step_4_globals.py`  
+  WizardStep4GlobalsView: scopes globales y permisos.
 
 - `wizard/step_5_scoped.py`  
-  WizardStep5ScopedView: asignación de paneles, vendedores, depósitos, cajas por empresa/sucursal.
+  WizardStep5ScopedView: paneles, vendedores, depósitos, cajas por empresa/sucursal.
+
+- `wizard/step_6_review.py`  
+  WizardStep6ReviewView: revisión, generación de documento y envío de solicitud.
+
+- `request_list.py`  
+  RequestListView: listado de solicitudes.
 
 - `requests.py`  
-  AccessRequestListView, AccessRequestDetailView: gestión de solicitudes.
+  RequestDetailView, RequestSubmittedView: detalle y confirmación de solicitudes.
 
 ### apps/catalog/admin
 
@@ -234,23 +264,26 @@ src/
 - `_progress.html`  
   Barra de progreso del wizard.
 
+- `step_0_start.html`  
+  Selección de modo y plantilla inicial.
+
 - `step_1_person.html`  
   Carga de datos personales.
 
-- `step_2_template_companies.html`  
-  Selección de plantilla, empresas e indicador de módulos compartidos.
+- `step_2_companies.html`  
+  Selección de empresas, sucursales e indicador de módulos compartidos.
 
-- `step_3_branches.html`  
-  Selección de sucursales por empresa.
+- `step_3_modules.html`  
+  Selección de módulos por empresa.
 
 - `step_4_globals.html`  
   Permisos globales (acciones, matriz, medios de pago).
 
-- `step_5_global.html`  
-  Módulos globales compartidos o por empresa (solo render, formularios en wizard.py).
-
 - `step_5_scoped.html`  
   Paneles, vendedores, depósitos, cajas por empresa/sucursal (accordion).
+
+- `step_6_review_document.html`  
+  Revisión final y generación de documento de solicitud.
 
 ### apps/core
 
