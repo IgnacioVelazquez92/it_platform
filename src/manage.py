@@ -6,21 +6,21 @@ from pathlib import Path
 
 
 def main():
-    """Run administrative tasks."""
-
     # src/manage.py -> src/
     base_dir = Path(__file__).resolve().parent
 
-    # Carga .env desde la raíz del proyecto (un nivel arriba de src)
+    # Cargar .env local (Railway ignora esto)
     try:
         from dotenv import load_dotenv
-        load_dotenv(base_dir.parent / ".env")  # .../it/.env
+        load_dotenv(base_dir.parent / ".env")
     except Exception:
-        # Si python-dotenv no está o el archivo no existe, no rompe
         pass
 
-    # Este módulo debe apuntar a config/settings/__init__.py
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+    # Default LOCAL (Railway lo pisa con env)
+    os.environ.setdefault(
+        "DJANGO_SETTINGS_MODULE",
+        "config.settings.development"
+    )
 
     from django.core.management import execute_from_command_line
     execute_from_command_line(sys.argv)

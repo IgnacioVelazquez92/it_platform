@@ -111,14 +111,18 @@ src/
       │     │  └─ step_6_review_document.html
       │     └─ request/
       │        └─ drafts.html
+      ├─ services/
+      │  ├─ templates.py
+      │  └─ template_from_request.py
       ├─ management/
       │  ├─ __init__.py
       │  └─ commands/
       │     ├─ __init__.py
+      │     ├─ bootstrap_catalog.py
+      │     ├─ bootstrap_visibility_rules.py
       │     ├─ import_modules_from_excel.py
       │     ├─ import_scoped_from_excel.py
-      │     ├─ import_action_permissions_from_excel.py
-      │     └─ bootstrap_visibility_rules.py
+      │     └─ import_action_permissions_from_excel.py
       └─ migrations/
 ```
 
@@ -219,6 +223,14 @@ src/
 - `requests.py`  
   RequestDetailView, RequestSubmittedView: detalle y confirmación de solicitudes.
 
+### apps/catalog/services
+
+- `templates.py`  
+  clone_selection_set: clonación de selection_set para plantillas reutilizables.
+
+- `template_from_request.py`  
+  create_template_from_request: genera plantilla desde solicitud de acceso.
+
 ### apps/catalog/admin
 
 - `person_admin.py`  
@@ -247,6 +259,12 @@ src/
 
 ### apps/catalog/management/commands
 
+- `bootstrap_catalog.py`  
+  Inicializa el catálogo con datos básicos del sistema.
+
+- `bootstrap_visibility_rules.py`  
+  Crea reglas de visibilidad predeterminadas.
+
 - `import_modules_from_excel.py`  
   Importa módulos desde Excel.
 
@@ -255,9 +273,6 @@ src/
 
 - `import_action_permissions_from_excel.py`  
   Importa permisos de acciones desde Excel.
-
-- `bootstrap_visibility_rules.py`  
-  Crea reglas de visibilidad predeterminadas.
 
 ### templates/catalog/wizard
 
