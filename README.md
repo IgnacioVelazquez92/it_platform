@@ -1,4 +1,4 @@
-# IT Platform — Resumen estructural (prompt vivo)
+# IT Platform — Resumen estructural
 
 ## Árbol del proyecto
 
