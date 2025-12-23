@@ -47,7 +47,9 @@ def _send_email_console(subject: str, body: str, recipients: list[str]) -> None:
 
 
 def _send_email_gmail_oauth(subject: str, body: str, recipients: list[str]) -> None:
+    logger.info(f"[EMAIL] _send_email_gmail_oauth called. Recipients: {recipients}")
     if not recipients:
+        logger.warning("[EMAIL] No recipients for OAuth email, returning.")
         return
 
     client_id = getattr(settings, "GMAIL_OAUTH_CLIENT_ID", "")
@@ -68,6 +70,8 @@ def _send_email_gmail_oauth(subject: str, body: str, recipients: list[str]) -> N
     if missing:
         raise RuntimeError(
             f"Faltan settings OAuth Gmail: {', '.join(missing)}")
+    
+    logger.info(f"[EMAIL] OAuth settings found. ClientID: ...{client_id[-5:] if client_id else ''}")
 
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
@@ -89,7 +93,9 @@ def _send_email_gmail_oauth(subject: str, body: str, recipients: list[str]) -> N
     msg["subject"] = subject
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
-    service.users().messages().send(userId="me", body={"raw": raw}).execute()
+    logger.info("[EMAIL] Enviando mensaje a Gmail API...")
+    ret = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+    logger.info(f"[EMAIL] Mensaje enviado. Response ID: {ret.get('id')}")
 
 
 def _notify_it(request_obj: AccessRequest) -> None:
@@ -108,6 +114,7 @@ def _notify_it(request_obj: AccessRequest) -> None:
     )
 
     recipients = list(getattr(settings, "CATALOG_IT_NOTIFY_EMAILS", []) or [])
+    logger.info(f"[EMAIL] _notify_it called. Recipients found in settings: {recipients}")
     if not recipients:
         logger.warning("[EMAIL] No hay CATALOG_IT_NOTIFY_EMAILS configurado.")
         return
@@ -474,6 +481,7 @@ class WizardStep6ReviewView(WizardBaseView):
         req.save(update_fields=["status", "updated_at"])
 
         def _on_commit_send():
+            logger.info(f"[EMAIL] Transaction committed. Starting _on_commit_send for req {req.id}")
             try:
                 req2 = AccessRequest.objects.select_related(
                     "person_data").get(pk=req.id)
