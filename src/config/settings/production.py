@@ -2,13 +2,43 @@ from .base import *  # noqa
 import os
 import dj_database_url
 
+# =========================
+# CORE
+# =========================
+
 DEBUG = False
 
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.getenv("ALLOWED_HOSTS", "").split(",")
-    if h.strip()
-]
+
+# =========================
+# HOSTS / CSRF (Railway-safe)
+# =========================
+
+# ALLOWED_HOSTS
+raw_hosts = os.getenv("ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(",") if h.strip()]
+
+# Fallback seguro para Railway (evita DisallowedHost)
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = [
+        "pharma-it.up.railway.app",
+        ".up.railway.app",
+    ]
+
+
+# CSRF_TRUSTED_ORIGINS
+raw_csrf = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in raw_csrf.split(",") if o.strip()]
+
+# Fallback CSRF seguro (solo tu dominio real)
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = [
+        "https://pharma-it.up.railway.app",
+    ]
+
+
+# =========================
+# DATABASE
+# =========================
 
 DATABASES = {
     "default": dj_database_url.config(
@@ -18,24 +48,30 @@ DATABASES = {
     )
 }
 
+
+# =========================
+# SECURITY / PROXY
+# =========================
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-CSRF_TRUSTED_ORIGINS = [
-    o.strip()
-    for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
-    if o.strip()
-]
 
-# WhiteNoise
+# =========================
+# STATIC FILES
+# =========================
+
 STATICFILES_STORAGE = (
     "whitenoise.storage.CompressedManifestStaticFilesStorage"
 )
 
-# ===== APP CONFIG =====
+
+# =========================
+# APP CONFIG
+# =========================
 
 CATALOG_IT_NOTIFY_EMAILS = os.getenv(
     "CATALOG_IT_NOTIFY_EMAILS",
-    "it@empresa.com"
+    "i.velazquez@pharmacenter.com.ar",
 ).split(",")
 
 USE_GMAIL_OAUTH = True
