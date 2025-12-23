@@ -7,7 +7,7 @@
   <div class="mb-3">
     <h3 class="mb-1">Empresas y sucursales</h3>
     <div class="text-muted">
-      Elegí el alcance. Primero empresas; luego, si hace falta, seleccionás sucursales específicas.
+      Elegí el alcance. Seleccioná empresas y luego sus sucursales correspondientes.
     </div>
   </div>
 
@@ -46,7 +46,7 @@
           </div>
 
           <div class="text-muted small mt-2">
-            Si no seleccionás sucursales, se interpreta como acceso a nivel empresa (sin sucursal específica).
+            <!-- Si no seleccionás sucursales, se interpreta como acceso a nivel empresa (sin sucursal específica). -->
           </div>
         </div>
 
@@ -54,7 +54,7 @@
         <div class="col-12">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="fw-semibold">Sucursales</div>
-            <span class="text-muted small">Opcional</span>
+            <span class="text-muted small">Obligatorio</span>
           </div>
 
           {% if form.branches.errors %}
@@ -232,8 +232,11 @@
     }
 
     if (branches === 0) {
-      summaryText.textContent = `Empresas: ${companies} · Sucursales: (ninguna, acceso a nivel empresa)`;
+      summaryText.textContent = `Empresas: ${companies} · Tenés que elegir sucursales`;
+      summaryText.classList.add("text-danger");
       return;
+    } else {
+        summaryText.classList.remove("text-danger");
     }
 
     summaryText.textContent = `Empresas: ${companies} · Sucursales seleccionadas: ${branches}`;
