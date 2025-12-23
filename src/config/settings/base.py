@@ -72,12 +72,15 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
 
-# Correo (Gmail OAuth) - PROD override in production.py
-USE_GMAIL_OAUTH = False
-GMAIL_OAUTH_CLIENT_ID = ""
-GMAIL_OAUTH_CLIENT_SECRET = ""
-GMAIL_OAUTH_REFRESH_TOKEN = ""
-GMAIL_OAUTH_SENDER = ""
+# Correo (Gmail OAuth)
+USE_GMAIL_OAUTH = True
+GMAIL_OAUTH_CLIENT_ID = os.getenv("GMAIL_OAUTH_CLIENT_ID", "")
+GMAIL_OAUTH_CLIENT_SECRET = os.getenv("GMAIL_OAUTH_CLIENT_SECRET", "")
+GMAIL_OAUTH_REFRESH_TOKEN = os.getenv("GMAIL_OAUTH_REFRESH_TOKEN", "")
+GMAIL_OAUTH_SENDER = os.getenv("GMAIL_OAUTH_SENDER", "")
 
-# Destinatarios (default empty)
-CATALOG_IT_NOTIFY_EMAILS = []
+# Destinatarios
+CATALOG_IT_NOTIFY_EMAILS = [
+    "i.velazquez@pharmacenter.com.ar",
+    "j.fiad@pharmacenter.com",
+]

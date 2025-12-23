@@ -61,7 +61,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # =========================
 
 STATICFILES_STORAGE = (
-    "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    "whitenoise.storage.CompressedStaticFilesStorage"
 )
 
 
@@ -71,7 +71,7 @@ STATICFILES_STORAGE = (
 
 CATALOG_IT_NOTIFY_EMAILS = os.getenv(
     "CATALOG_IT_NOTIFY_EMAILS",
-    "i.velazquez@pharmacenter.com.ar,j.fiad@pharmacenter.com",
+    "i.velazquez@pharmacenter.com.ar,j.fiad@pharmacenter.com.ar",
 ).split(",")
 
 USE_GMAIL_OAUTH = True
@@ -80,3 +80,23 @@ GMAIL_OAUTH_SENDER = os.getenv("GMAIL_OAUTH_SENDER", "")
 GMAIL_OAUTH_CLIENT_ID = os.getenv("GMAIL_OAUTH_CLIENT_ID", "")
 GMAIL_OAUTH_CLIENT_SECRET = os.getenv("GMAIL_OAUTH_CLIENT_SECRET", "")
 GMAIL_OAUTH_REFRESH_TOKEN = os.getenv("GMAIL_OAUTH_REFRESH_TOKEN", "")
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
