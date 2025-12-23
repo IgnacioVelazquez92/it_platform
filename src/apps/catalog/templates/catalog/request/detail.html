@@ -1,45 +1,371 @@
 {% extends "base/base.html" %}
+{% load catalog_extras %}
+{% load static %}
 
 {% block content %}
 <div class="container py-4" style="max-width: 1100px;">
+
   <div class="d-flex justify-content-between align-items-start mb-3">
     <div>
       <h3 class="mb-0">Solicitud #{{ request_obj.id }}</h3>
-      <div class="text-muted">Estado: {{ request_obj.get_status_display }} — Tipo: {{ request_obj.get_kind_display }}</div>
+      <div class="text-muted small">
+        Estado: <span class="fw-semibold">{{ request_obj.get_status_display }}</span>
+        — Tipo: <span class="fw-semibold">{{ request_obj.get_kind_display }}</span>
+      </div>
     </div>
     <a class="btn btn-outline-secondary" href="/">Volver</a>
   </div>
 
   <div class="card shadow-sm">
     <div class="card-body">
-      <h5 class="mb-2">Datos de la persona</h5>
-      <div class="row small">
-        <div class="col-md-6"><span class="text-muted">Nombre:</span> <span class="fw-semibold">{{ request_obj.person_data.last_name }}, {{ request_obj.person_data.first_name }}</span></div>
-        <div class="col-md-6"><span class="text-muted">DNI:</span> <span class="fw-semibold">{{ request_obj.person_data.dni }}</span></div>
-        <div class="col-md-6"><span class="text-muted">Email:</span> <span class="fw-semibold">{{ request_obj.person_data.email }}</span></div>
-        <div class="col-md-6"><span class="text-muted">Celular:</span> <span class="fw-semibold">{{ request_obj.person_data.mobile_phone }}</span></div>
-        <div class="col-md-6"><span class="text-muted">Puesto:</span> <span class="fw-semibold">{{ request_obj.person_data.job_title }}</span></div>
-        <div class="col-md-6"><span class="text-muted">Jefe directo:</span> <span class="fw-semibold">{{ request_obj.person_data.direct_manager }}</span></div>
-      </div>
 
-      <hr class="my-3">
+      <!-- Tabs principales -->
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-persona" type="button" role="tab">
+            Persona
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-accesos" type="button" role="tab">
+            Accesos
+          </button>
+        </li>
+      </ul>
 
-      <h5 class="mb-2">Empresas / Sucursales</h5>
-      <div class="small">
-        {% for it in request_obj.items.all %}
-          <div class="border rounded p-2 mb-2">
-            <div class="fw-semibold">{{ it.selection_set.company.name }}</div>
-            {% if it.selection_set.branch %}
-              <div class="text-muted">Sucursal: {{ it.selection_set.branch.name }}</div>
-            {% else %}
-              <div class="text-muted">Sin sucursal</div>
-            {% endif %}
+      <div class="tab-content border border-top-0 rounded-bottom p-3">
+
+        <!-- Persona -->
+        <div class="tab-pane fade show active" id="tab-persona" role="tabpanel">
+          <h5 class="mb-2">Datos de la persona</h5>
+          <div class="row small">
+            <div class="col-md-6"><span class="text-muted">Nombre:</span> <span class="fw-semibold">{{ request_obj.person_data.last_name }}, {{ request_obj.person_data.first_name }}</span></div>
+            <div class="col-md-6"><span class="text-muted">DNI:</span> <span class="fw-semibold">{{ request_obj.person_data.dni }}</span></div>
+            <div class="col-md-6"><span class="text-muted">Email:</span> <span class="fw-semibold">{{ request_obj.person_data.email }}</span></div>
+            <div class="col-md-6"><span class="text-muted">Celular:</span> <span class="fw-semibold">{{ request_obj.person_data.mobile_phone }}</span></div>
+            <div class="col-md-6"><span class="text-muted">Puesto:</span> <span class="fw-semibold">{{ request_obj.person_data.job_title }}</span></div>
+            <div class="col-md-6"><span class="text-muted">Jefe directo:</span> <span class="fw-semibold">{{ request_obj.person_data.direct_manager }}</span></div>
           </div>
-        {% empty %}
-          <div class="text-muted">Sin ítems.</div>
-        {% endfor %}
+
+          {% if request_obj.notes %}
+            <hr class="my-3">
+            <div class="fw-semibold">Notas</div>
+            <div class="small text-muted">{{ request_obj.notes|linebreaksbr }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Accesos -->
+        <div class="tab-pane fade" id="tab-accesos" role="tabpanel">
+
+          {% if companies %}
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div>
+                <div class="fw-semibold">Empresas</div>
+                <div class="text-muted small">Navegá por empresa para ver accesos y scoped por sucursal.</div>
+              </div>
+            </div>
+
+            <!-- Tabs por empresa -->
+            <ul class="nav nav-tabs small" role="tablist">
+              {% for c in companies %}
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-2 {% if forloop.first %}active{% endif %}"
+                          data-bs-toggle="tab"
+                          data-bs-target="#company-{{ forloop.counter }}"
+                          type="button" role="tab">
+                    {{ c.company.name }}
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+
+            <div class="tab-content border border-top-0 rounded-bottom p-2 bg-body">
+              {% for c in companies %}
+                <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                     id="company-{{ forloop.counter }}" role="tabpanel">
+
+                  <!-- Bloque compacto tipo step -->
+                  <div class="border rounded p-3 small">
+
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                      <div>
+                        <div class="fw-semibold">{{ c.company.name }}</div>
+                        <div class="text-muted small">Solo lectura. Solo se muestra lo marcado/habilitado.</div>
+                      </div>
+                    </div>
+
+                    <!-- Layout 2 columnas (como step 4) -->
+                    <div class="row g-3">
+
+                      <!-- Col izquierda: Módulos + Paneles + Vendedores -->
+                      <div class="col-md-6">
+                        <div class="fw-semibold mb-1">Módulos / árbol</div>
+
+                        {% if c.payload.levels_tree %}
+                          <div class="soft-card">
+                            {% for node in c.payload.levels_tree %}
+                              <details class="clean" {% if forloop.first %}open{% endif %}>
+                                <summary>{{ node.module.name }}</summary>
+                                {% if node.levels %}
+                                  <div class="ms-3 mt-1">
+                                    {% for lv in node.levels %}
+                                      <details class="clean">
+                                        <summary class="fw-normal">{{ lv.level.name }}</summary>
+                                        {% if lv.sublevels %}
+                                          <ul class="tight small text-muted">
+                                            {% for sl in lv.sublevels %}
+                                              <li>{{ sl.name }}</li>
+                                            {% endfor %}
+                                          </ul>
+                                        {% else %}
+                                          <div class="text-muted small ms-3">—</div>
+                                        {% endif %}
+                                      </details>
+                                    {% endfor %}
+                                  </div>
+                                {% else %}
+                                  <div class="text-muted small ms-3">—</div>
+                                {% endif %}
+                              </details>
+                            {% endfor %}
+                          </div>
+
+                        {% elif c.payload.modules %}
+                          <div class="soft-card">
+                            {% for m in c.payload.modules %}
+                              <span class="pill">{{ m.name }}</span>
+                            {% endfor %}
+                          </div>
+                          <div class="text-muted small mt-2">Nota: no hay niveles/subniveles para armar el árbol.</div>
+                        {% else %}
+                          <div class="text-muted small">— Sin módulos seleccionados.</div>
+                        {% endif %}
+
+                        <div class="mt-3">
+                          <div class="text-muted small fw-semibold mb-1">Paneles</div>
+                          {% if c.payload.control_panels %}
+                            {% for x in c.payload.control_panels %}
+                              <span class="pill">{{ x.name }}</span>
+                            {% endfor %}
+                          {% else %}
+                            <div class="text-muted small">—</div>
+                          {% endif %}
+                        </div>
+
+                        <div class="mt-2">
+                          <div class="text-muted small fw-semibold mb-1">Vendedores</div>
+                          {% if c.payload.sellers %}
+                            {% for x in c.payload.sellers %}
+                              <span class="pill">{{ x.name }}</span>
+                            {% endfor %}
+                          {% else %}
+                            <div class="text-muted small">—</div>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      <!-- Col derecha: Acciones (tabs) + Medios -->
+                      <div class="col-md-5">
+                        <div class="fw-semibold mb-1">Permisos globales</div>
+
+                        <div class="mt-2">
+                          <div class="text-muted small fw-semibold mb-1">Acciones</div>
+
+                          {% if c.payload.actions_by_group %}
+                            <!-- Tabs de grupos (como step 4) -->
+                            <ul class="nav nav-tabs small" role="tablist">
+                              {% for g in c.payload.action_groups %}
+                                <li class="nav-item" role="presentation">
+                                  <button class="nav-link py-2 {% if forloop.first %}active{% endif %}"
+                                          data-bs-toggle="tab"
+                                          data-bs-target="#act-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                                          type="button" role="tab">
+                                    {{ g }}
+                                  </button>
+                                </li>
+                              {% endfor %}
+                            </ul>
+
+                            <div class="tab-content border border-top-0 rounded-bottom p-2 bg-body">
+                              {% for g in c.payload.action_groups %}
+                                <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                                     id="act-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" role="tabpanel">
+
+                                  <div class="row g-2">
+                                    {% for row in c.payload.actions_by_group|get_item:g %}
+                                      <div class="col-12">
+                                        <div class="border rounded px-2 py-2">
+                                          <div class="d-flex align-items-start justify-content-between gap-3">
+                                            <div class="pe-2">
+                                              <div class="fw-semibold">{{ row.name }}</div>
+                                            </div>
+                                            <div class="text-muted">
+                                              {{ row.val }}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    {% endfor %}
+                                  </div>
+
+                                </div>
+                              {% endfor %}
+                            </div>
+                          {% else %}
+                            <div class="text-muted small">—</div>
+                          {% endif %}
+                        </div>
+
+                        <div class="mt-3">
+                          <div class="text-muted small fw-semibold mb-1">Medios de pago habilitados</div>
+                          {% if c.payload.payment_methods %}
+                            {% for pm in c.payload.payment_methods %}
+                              <span class="pill">{{ pm.name }}</span>
+                            {% endfor %}
+                          {% else %}
+                            <div class="text-muted small">—</div>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <!-- Matriz -->
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                      <div class="fw-semibold">Matriz de permisos</div>
+                      <span class="text-muted small">Solo filas con al menos un check</span>
+                    </div>
+
+                    {% if c.payload.matrix %}
+                      <div class="border rounded matrix-scroll">
+                        <table class="table table-sm align-middle mb-0">
+                          <thead class="table-light matrix-head">
+                            <tr>
+                              <th style="min-width: 320px;">Permisos</th>
+                              <th class="text-center">Crear</th>
+                              <th class="text-center">Modificar</th>
+                              <th class="text-center">Autorizar</th>
+                              <th class="text-center">Cerrar</th>
+                              <th class="text-center">Anular</th>
+                              <th class="text-center">Actualiza vigencia</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for r in c.payload.matrix %}
+                              <tr>
+                                <td class="fw-semibold">{{ r.permission.name }}</td>
+                                <td class="text-center">{% if r.can_create %}✔{% endif %}</td>
+                                <td class="text-center">{% if r.can_update %}✔{% endif %}</td>
+                                <td class="text-center">{% if r.can_authorize %}✔{% endif %}</td>
+                                <td class="text-center">{% if r.can_close %}✔{% endif %}</td>
+                                <td class="text-center">{% if r.can_cancel %}✔{% endif %}</td>
+                                <td class="text-center">{% if r.can_update_validity %}✔{% endif %}</td>
+                              </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
+                    {% else %}
+                      <div class="text-muted small">—</div>
+                    {% endif %}
+
+                    <hr class="my-3">
+
+                    <!-- Scoped por sucursal -->
+                    <div class="fw-semibold mb-2">Sucursales (solo Depósitos y Cajas)</div>
+                    <div class="table-responsive border rounded">
+                      <table class="table table-sm mb-0 align-middle">
+                        <thead class="table-light">
+                          <tr>
+                            <th style="width: 28%;">Sucursal</th>
+                            <th>Depósitos</th>
+                            <th>Cajas</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for b in c.payload.branches %}
+                            <tr>
+                              <td class="fw-semibold">
+                                {% if b.branch %}{{ b.branch.name }}{% else %}<span class="text-muted">—</span>{% endif %}
+                              </td>
+                              <td>
+                                {% if b.warehouses %}
+                                  <ul class="mb-0">
+                                    {% for x in b.warehouses %}<li>{{ x.name }}</li>{% endfor %}
+                                  </ul>
+                                {% else %}
+                                  <span class="text-muted">—</span>
+                                {% endif %}
+                              </td>
+                              <td>
+                                {% if b.cash_registers %}
+                                  <ul class="mb-0">
+                                    {% for x in b.cash_registers %}<li>{{ x.name }}</li>{% endfor %}
+                                  </ul>
+                                {% else %}
+                                  <span class="text-muted">—</span>
+                                {% endif %}
+                              </td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
+          {% else %}
+            <div class="text-muted small">Sin ítems.</div>
+          {% endif %}
+
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  /* Compacto tipo Step */
+  .soft-card{
+    background:#fbfcfd;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:12px;
+    padding:10px;
+  }
+  .pill {
+    display:inline-flex;
+    align-items:center;
+    padding:.22rem .5rem;
+    border-radius:999px;
+    border:1px solid #e9ecef;
+    background:#fff;
+    font-size:.85rem;
+    margin:0 .35rem .35rem 0;
+  }
+  details.clean > summary{
+    list-style:none;
+    cursor:pointer;
+    user-select:none;
+    padding:.2rem 0;
+    font-weight:600;
+  }
+  details.clean > summary::-webkit-details-marker{ display:none; }
+  details.clean > summary:before{
+    content:"▸";
+    display:inline-block;
+    width:1.1rem;
+    color:#6c757d;
+  }
+  details.clean[open] > summary:before{ content:"▾"; }
+  .tight{ margin:0; padding-left:1.1rem; }
+  .tight li{ margin:.12rem 0; }
+
+  /* Matriz con scroll + sticky head */
+  .matrix-scroll { max-height: 420px; overflow: auto; }
+  .matrix-head th { position: sticky; top: 0; z-index: 2; }
+</style>
 {% endblock %}

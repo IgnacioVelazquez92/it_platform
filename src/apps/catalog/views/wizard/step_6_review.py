@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import base64
 import logging
 from email.mime.text import MIMEText
@@ -19,6 +19,8 @@ from apps.catalog.models.selections import (
     SelectionSetActionValue,
     SelectionSetMatrixPermission,
     SelectionSetPaymentMethod,
+    SelectionSetLevel,
+    SelectionSetSubLevel,
 )
 
 from .base import WizardBaseView
@@ -30,10 +32,6 @@ logger = logging.getLogger("apps.catalog")
 # EMAIL: DEV (consola) / PROD (Gmail API OAuth)
 # -------------------------------------------------
 def _send_email_console(subject: str, body: str, recipients: list[str]) -> None:
-    """
-    DEV: se imprime en consola usando el backend console de Django
-    (igual deja rastros en logs/terminal, sin depender de SMTP).
-    """
     from django.core.mail import send_mail
 
     if not recipients:
@@ -49,14 +47,6 @@ def _send_email_console(subject: str, body: str, recipients: list[str]) -> None:
 
 
 def _send_email_gmail_oauth(subject: str, body: str, recipients: list[str]) -> None:
-    """
-    PROD: Gmail API con OAuth (refresh_token).
-    Requiere:
-      - GMAIL_OAUTH_CLIENT_ID
-      - GMAIL_OAUTH_CLIENT_SECRET
-      - GMAIL_OAUTH_REFRESH_TOKEN
-      - GMAIL_OAUTH_SENDER (cuenta real que enviará)
-    """
     if not recipients:
         return
 
@@ -65,18 +55,20 @@ def _send_email_gmail_oauth(subject: str, body: str, recipients: list[str]) -> N
     refresh_token = getattr(settings, "GMAIL_OAUTH_REFRESH_TOKEN", "")
     sender = getattr(settings, "GMAIL_OAUTH_SENDER", "")
 
-    missing = [k for k, v in {
-        "GMAIL_OAUTH_CLIENT_ID": client_id,
-        "GMAIL_OAUTH_CLIENT_SECRET": client_secret,
-        "GMAIL_OAUTH_REFRESH_TOKEN": refresh_token,
-        "GMAIL_OAUTH_SENDER": sender,
-    }.items() if not v]
-
+    missing = [
+        k
+        for k, v in {
+            "GMAIL_OAUTH_CLIENT_ID": client_id,
+            "GMAIL_OAUTH_CLIENT_SECRET": client_secret,
+            "GMAIL_OAUTH_REFRESH_TOKEN": refresh_token,
+            "GMAIL_OAUTH_SENDER": sender,
+        }.items()
+        if not v
+    ]
     if missing:
         raise RuntimeError(
             f"Faltan settings OAuth Gmail: {', '.join(missing)}")
 
-    # OAuth Credentials (refresh token)
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
 
@@ -91,7 +83,6 @@ def _send_email_gmail_oauth(subject: str, body: str, recipients: list[str]) -> N
 
     service = build("gmail", "v1", credentials=creds, cache_discovery=False)
 
-    # MIME email
     msg = MIMEText(body, "plain", "utf-8")
     msg["to"] = ", ".join(recipients)
     msg["from"] = sender
@@ -102,11 +93,6 @@ def _send_email_gmail_oauth(subject: str, body: str, recipients: list[str]) -> N
 
 
 def _notify_it(request_obj: AccessRequest) -> None:
-    """
-    Decide DEV vs PROD.
-    - DEV: consola.
-    - PROD: OAuth Gmail API.
-    """
     subject = (
         f"[IT] Nueva solicitud #{request_obj.id} — "
         f"{request_obj.person_data.last_name}, {request_obj.person_data.first_name}"
@@ -126,7 +112,6 @@ def _notify_it(request_obj: AccessRequest) -> None:
         logger.warning("[EMAIL] No hay CATALOG_IT_NOTIFY_EMAILS configurado.")
         return
 
-    # Regla: en PROD sí o sí OAuth
     use_oauth = bool(getattr(settings, "USE_GMAIL_OAUTH", False))
 
     if settings.DEBUG and not use_oauth:
@@ -134,7 +119,6 @@ def _notify_it(request_obj: AccessRequest) -> None:
         logger.info("[EMAIL] Notificación enviada por consola (DEV).")
         return
 
-    # PROD: OAuth
     _send_email_gmail_oauth(subject, body, recipients)
     logger.info("[EMAIL] Notificación enviada por Gmail API OAuth (PROD).")
 
@@ -151,8 +135,7 @@ class WizardStep6ReviewView(WizardBaseView):
             raise AccessRequest.DoesNotExist
 
         return (
-            AccessRequest.objects
-            .select_related("person_data")
+            AccessRequest.objects.select_related("person_data")
             .prefetch_related(
                 "items__selection_set__company",
                 "items__selection_set__branch",
@@ -161,37 +144,82 @@ class WizardStep6ReviewView(WizardBaseView):
             .get(pk=req_id)
         )
 
-    def _build_selection_payload(self, ss):
-        modules = list(ss.modules.filter(is_active=True).order_by("name"))
+    # -----------------------------
+    # Tree: Módulo -> Nivel -> Subnivel
+    # -----------------------------
+    def _build_levels_tree(self, ss) -> list[dict]:
+        """
+        Devuelve una estructura:
+        [
+          {"module": <ErpModule>, "levels": [
+              {"level": <ErpModuleLevel>, "sublevels":[<ErpModuleSubLevel>, ...]},
+              ...
+          ]},
+          ...
+        ]
+        """
+        selected_levels = (
+            SelectionSetLevel.objects.filter(selection_set=ss)
+            .select_related("level__module")
+            .order_by("level__module__name", "level__name")
+        )
+        selected_sublevels = (
+            SelectionSetSubLevel.objects.filter(selection_set=ss)
+            .select_related("sublevel__level__module", "sublevel__level")
+            .order_by("sublevel__level__module__name", "sublevel__level__name", "sublevel__name")
+        )
 
-        warehouses = list(
-            SelectionSetWarehouse.objects
-            .filter(selection_set=ss)
-            .select_related("warehouse")
-            .order_by("warehouse__name")
-        )
-        cash_registers = list(
-            SelectionSetCashRegister.objects
-            .filter(selection_set=ss)
-            .select_related("cash_register")
-            .order_by("cash_register__name")
-        )
+        # module_id -> {"module": module, "levels": OrderedDict(level_id -> {...})}
+        mod_map: dict[int, dict] = {}
+
+        for r in selected_levels:
+            m = r.level.module
+            mod_bucket = mod_map.setdefault(
+                m.id, {"module": m, "levels": OrderedDict()})
+            mod_bucket["levels"].setdefault(
+                r.level.id, {"level": r.level, "sublevels": []}
+            )
+
+        for r in selected_sublevels:
+            sub = r.sublevel
+            lvl = sub.level
+            mod = lvl.module
+
+            mod_bucket = mod_map.setdefault(
+                mod.id, {"module": mod, "levels": OrderedDict()})
+            lvl_bucket = mod_bucket["levels"].setdefault(
+                lvl.id, {"level": lvl, "sublevels": []}
+            )
+            lvl_bucket["sublevels"].append(sub)
+
+        out: list[dict] = []
+        for m_id, bucket in sorted(mod_map.items(), key=lambda kv: kv[1]["module"].name):
+            levels_list = list(bucket["levels"].values())
+            out.append({"module": bucket["module"], "levels": levels_list})
+
+        return out
+
+    # -----------------------------
+    # Payloads
+    # -----------------------------
+    def _build_global_payload(self, ss) -> dict:
+        modules = list(ss.modules.filter(is_active=True).order_by("name"))
+        levels_tree = self._build_levels_tree(ss)
+
         control_panels = list(
-            SelectionSetControlPanel.objects
-            .filter(selection_set=ss)
+            SelectionSetControlPanel.objects.filter(selection_set=ss)
             .select_related("control_panel")
             .order_by("control_panel__name")
         )
         sellers = list(
-            SelectionSetSeller.objects
-            .filter(selection_set=ss)
+            SelectionSetSeller.objects.filter(selection_set=ss)
             .select_related("seller")
             .order_by("seller__name")
         )
 
         actions = list(
-            SelectionSetActionValue.objects
-            .filter(selection_set=ss, is_active=True)
+            SelectionSetActionValue.objects.filter(
+                selection_set=ss, is_active=True)
             .select_related("action_permission")
             .order_by("action_permission__group", "action_permission__action")
         )
@@ -218,35 +246,138 @@ class WizardStep6ReviewView(WizardBaseView):
             actions_by_group[ap.group].append((ap.action, val))
 
         matrix = list(
-            SelectionSetMatrixPermission.objects
-            .filter(selection_set=ss)
+            SelectionSetMatrixPermission.objects.filter(selection_set=ss)
             .select_related("permission")
             .order_by("permission__name")
         )
         matrix = [
-            r for r in matrix
-            if any([r.can_create, r.can_update, r.can_authorize, r.can_close, r.can_cancel, r.can_update_validity])
+            r
+            for r in matrix
+            if any(
+                [
+                    r.can_create,
+                    r.can_update,
+                    r.can_authorize,
+                    r.can_close,
+                    r.can_cancel,
+                    r.can_update_validity,
+                ]
+            )
         ]
 
         payment_methods = list(
-            SelectionSetPaymentMethod.objects
-            .filter(selection_set=ss, enabled=True, is_active=True)
+            SelectionSetPaymentMethod.objects.filter(
+                selection_set=ss, enabled=True, is_active=True)
             .select_related("payment_method")
             .order_by("payment_method__name")
         )
 
         return {
             "modules": modules,
-            "warehouses": [x.warehouse for x in warehouses],
-            "cash_registers": [x.cash_register for x in cash_registers],
+            "levels_tree": levels_tree,
             "control_panels": [x.control_panel for x in control_panels],
             "sellers": [x.seller for x in sellers],
             "actions_by_group": dict(actions_by_group),
             "matrix": matrix,
             "payment_methods": [x.payment_method for x in payment_methods],
-            "levels_tree": [],
         }
 
+    def _build_scoped_payload(self, ss) -> dict:
+        warehouses = list(
+            SelectionSetWarehouse.objects.filter(selection_set=ss)
+            .select_related("warehouse")
+            .order_by("warehouse__name")
+        )
+        cash_registers = list(
+            SelectionSetCashRegister.objects.filter(selection_set=ss)
+            .select_related("cash_register")
+            .order_by("cash_register__name")
+        )
+
+        return {
+            "warehouses": [x.warehouse for x in warehouses],
+            "cash_registers": [x.cash_register for x in cash_registers],
+        }
+
+    def _global_signature(self, ss) -> tuple:
+        """
+        Firma para detectar diferencias inesperadas entre sucursales de una misma empresa.
+        (No es “seguridad”, es control de consistencia para UX.)
+        """
+        modules = tuple(ss.modules.filter(is_active=True).order_by(
+            "id").values_list("id", flat=True))
+
+        levels = tuple(
+            SelectionSetLevel.objects.filter(selection_set=ss)
+            .order_by("level_id")
+            .values_list("level_id", flat=True)
+        )
+        sublevels = tuple(
+            SelectionSetSubLevel.objects.filter(selection_set=ss)
+            .order_by("sublevel_id")
+            .values_list("sublevel_id", flat=True)
+        )
+
+        control_panels = tuple(
+            SelectionSetControlPanel.objects.filter(selection_set=ss)
+            .order_by("control_panel_id")
+            .values_list("control_panel_id", flat=True)
+        )
+        sellers = tuple(
+            SelectionSetSeller.objects.filter(selection_set=ss)
+            .order_by("seller_id")
+            .values_list("seller_id", flat=True)
+        )
+
+        action_rows = tuple(
+            SelectionSetActionValue.objects.filter(
+                selection_set=ss, is_active=True)
+            .select_related("action_permission")
+            .order_by("action_permission_id")
+            .values_list(
+                "action_permission_id",
+                "value_bool",
+                "value_int",
+                "value_decimal",
+                "value_text",
+            )
+        )
+
+        matrix_rows = tuple(
+            SelectionSetMatrixPermission.objects.filter(selection_set=ss)
+            .order_by("permission_id")
+            .values_list(
+                "permission_id",
+                "can_create",
+                "can_update",
+                "can_authorize",
+                "can_close",
+                "can_cancel",
+                "can_update_validity",
+            )
+        )
+
+        pay_rows = tuple(
+            SelectionSetPaymentMethod.objects.filter(
+                selection_set=ss, is_active=True)
+            .order_by("payment_method_id")
+            .values_list("payment_method_id", "enabled")
+        )
+
+        return (
+            modules,
+            levels,
+            sublevels,
+            control_panels,
+            sellers,
+            action_rows,
+            matrix_rows,
+            pay_rows,
+        )
+
+    # -----------------------------
+    # GET
+    # -----------------------------
     def get(self, request):
         try:
             req = self._get_request(request)
@@ -258,16 +389,60 @@ class WizardStep6ReviewView(WizardBaseView):
             messages.warning(request, "Primero definí empresas y sucursales.")
             return self.redirect_to("catalog:wizard_step_2_companies")
 
-        blocks = []
+        # Agrupar por empresa, respetando el orden de aparición en items
+        companies_map: "OrderedDict[int, dict]" = OrderedDict()
+
         for it in items:
             ss = it.selection_set
-            blocks.append(
+            company = ss.company
+            bucket = companies_map.get(company.id)
+            if bucket is None:
+                bucket = {
+                    "company": company,
+                    "items": [],
+                }
+                companies_map[company.id] = bucket
+            bucket["items"].append(it)
+
+        companies: list[dict] = []
+
+        for company_id, bucket in companies_map.items():
+            its = bucket["items"]
+
+            # Base SS: el primero (define globales para la empresa)
+            base_ss = its[0].selection_set
+            base_sig = self._global_signature(base_ss)
+
+            # Scopes por sucursal: solo depósitos/cajas
+            branches = []
+            inconsistent = False
+
+            for it in its:
+                ss = it.selection_set
+
+                if self._global_signature(ss) != base_sig:
+                    inconsistent = True
+
+                branches.append(
+                    {
+                        "item": it,
+                        "branch": ss.branch,  # puede ser None
+                        "scoped": self._build_scoped_payload(ss),
+                    }
+                )
+
+            if inconsistent:
+                messages.warning(
+                    request,
+                    f"Atención: Se detectaron diferencias en permisos globales entre sucursales de {bucket['company'].name}. "
+                    "El documento muestra los globales tomando la primera sucursal como referencia.",
+                )
+
+            companies.append(
                 {
-                    "item": it,
-                    "selection_set": ss,
-                    "company": ss.company,
-                    "branch": ss.branch,
-                    "payload": self._build_selection_payload(ss),
+                    "company": bucket["company"],
+                    "globals": self._build_global_payload(base_ss),
+                    "branches": branches,
                 }
             )
 
@@ -276,11 +451,14 @@ class WizardStep6ReviewView(WizardBaseView):
             self.template_name,
             self.wizard_context(
                 request_obj=req,
-                blocks=blocks,
+                companies=companies,
                 items=items,
             ),
         )
 
+    # -----------------------------
+    # POST (igual que tenías)
+    # -----------------------------
     @transaction.atomic
     def post(self, request):
         try:
@@ -292,20 +470,18 @@ class WizardStep6ReviewView(WizardBaseView):
             messages.info(request, "La solicitud ya fue enviada o procesada.")
             return redirect("catalog:wizard_submitted", pk=req.id)
 
-        # 1) Persistir estado
         req.status = RequestStatus.SUBMITTED
         req.save(update_fields=["status", "updated_at"])
 
-        # 2) Enviar email SOLO si la transacción se confirma
         def _on_commit_send():
             try:
-                # refrescar para tener person_data cargado si hace falta
                 req2 = AccessRequest.objects.select_related(
                     "person_data").get(pk=req.id)
                 _notify_it(req2)
             except Exception as e:
                 logger.exception(
-                    "[EMAIL] Falló notificación IT para request_id=%s: %s", req.id, e)
+                    "[EMAIL] Falló notificación IT para request_id=%s: %s", req.id, e
+                )
 
         transaction.on_commit(_on_commit_send)
 

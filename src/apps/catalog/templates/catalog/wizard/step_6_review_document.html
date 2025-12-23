@@ -5,14 +5,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Solicitud de alta — #{{ request_obj.id }}</title>
+  <title>Solicitud — #{{ request_obj.id }}</title>
 
-  <!-- Bootstrap local -->
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
 
   <style>
     :root { --doc-muted: #6c757d; }
-
     body { background: #f6f7f9; }
     .doc-wrap { max-width: 980px; }
     .doc-paper {
@@ -25,7 +23,6 @@
     .doc-title { letter-spacing: .2px; }
     .doc-muted { color: var(--doc-muted); }
     .doc-hr { border-top: 1px solid #e9ecef; margin: 18px 0; }
-
     .kv dt { color: var(--doc-muted); font-weight: 600; }
     .kv dd { margin-bottom: .25rem; }
 
@@ -39,16 +36,12 @@
     .table thead th { font-size: .85rem; }
     .table td, .table th { vertical-align: middle; }
 
-    .section-title {
-      font-weight: 700;
-      margin: 0 0 .35rem 0;
-    }
-    .section-sub {
-      color: var(--doc-muted);
-      font-size: .9rem;
-    }
+    .section-title { font-weight: 700; margin: 0 0 .35rem 0; }
+    .section-sub { color: var(--doc-muted); font-size: .9rem; }
 
-    /* Impresión */
+    .tree ul { margin-bottom: .25rem; }
+    .tree li { margin-bottom: .15rem; }
+
     @media print {
       body { background: #fff; }
       .no-print { display: none !important; }
@@ -56,6 +49,7 @@
       .page-break { page-break-before: always; }
     }
   </style>
+  
 </head>
 
 <body>
@@ -76,11 +70,10 @@
       <div class="d-flex align-items-start justify-content-between gap-3">
         <div>
           <div class="doc-muted small">IT Platform — Solicitud</div>
-          <h3 class="doc-title mb-1">Solicitud de alta / modificación de usuario</h3>
+          <h3 class="doc-title mb-1">Solicitud de alta</h3>
         </div>
         <div class="text-end doc-muted small">
-          Creada: {{ request_obj.created_at|date:"d/m/Y H:i" }}
-          <br>
+          Creada: {{ request_obj.created_at|date:"d/m/Y H:i" }}<br>
           Últ. actualización: {{ request_obj.updated_at|date:"d/m/Y H:i" }}
         </div>
       </div>
@@ -118,96 +111,82 @@
       <!-- Alcance -->
       <div class="mb-2">
         <div class="section-title">Alcance</div>
-        <div class="section-sub">Empresas y sucursales solicitadas.</div>
+        <div class="section-sub">Empresas incluidas en la solicitud.</div>
       </div>
 
       <ul class="mb-0">
-        {% for b in blocks %}
-          <li>
-            <span class="fw-semibold">{{ b.company.name }}</span>
-            {% if b.branch %}<span class="doc-muted">/ {{ b.branch.name }}</span>{% endif %}
-          </li>
+        {% for c in companies %}
+          <li><span class="fw-semibold">{{ c.company.name }}</span></li>
         {% endfor %}
       </ul>
 
       <div class="doc-hr"></div>
 
-      <!-- Detalle por empresa/sucursal -->
+      <!-- Por empresa -->
       <div class="mb-2">
         <div class="section-title">Detalle de accesos</div>
-        <div class="section-sub">Accesos otorgados por empresa/sucursal.</div>
+        <div class="section-sub">Accesos agrupados por empresa.</div>
       </div>
 
-      {% for b in blocks %}
-        {% if not forloop.first %}
-          <div class="doc-hr"></div>
-        {% endif %}
+      {% for c in companies %}
+        {% if not forloop.first %}<div class="doc-hr"></div>{% endif %}
 
         <div class="d-flex align-items-start justify-content-between gap-3">
           <div>
-            <h5 class="mb-1">
-              {{ b.company.name }}
-              {% if b.branch %}<span class="doc-muted">/ {{ b.branch.name }}</span>{% endif %}
-            </h5>
-            <div class="doc-muted small">
-              SelectionSet #{{ b.selection_set.id }}
-            </div>
+            <h5 class="mb-1">{{ c.company.name }}</h5>
+            <div class="doc-muted small">Permisos</div>
           </div>
         </div>
 
-        <!-- Módulos -->
-        <div class="mt-3">
-          <div class="fw-semibold">Módulos y permisos</div>
-          {% if b.payload.modules %}
-            <div class="d-flex flex-wrap gap-2 mt-2">
-              {% for m in b.payload.modules %}
-                <span class="badge badge-soft">{{ m.name }}</span>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="doc-muted small mt-1">— Sin módulos seleccionados.</div>
-          {% endif %}
-
-          {# FUTURO: si persistís niveles/subniveles, acá va un árbol sin JS #}
-          {% if b.payload.levels_tree %}
-            <div class="mt-2 small">
-              <!-- render árbol -->
-            </div>
-          {% endif %}
-        </div>
-
-        <!-- Scoped -->
-        <div class="row g-3 mt-3">
+        <!-- Globales -->
+        <div class="row g-3 mt-2">
           <div class="col-md-6">
-            <div class="fw-semibold">Scoped (por empresa/sucursal)</div>
+            <div class="fw-semibold">Módulos</div>
 
-            <div class="mt-2">
-              <div class="doc-muted small fw-semibold">Depósitos</div>
-              {% if b.payload.warehouses %}
+            {% if c.globals.levels_tree %}
+              <div class="tree mt-2 small">
                 <ul class="mb-0">
-                  {% for x in b.payload.warehouses %}<li>{{ x.name }}</li>{% endfor %}
+                  {% for node in c.globals.levels_tree %}
+                    <li>
+                      <span class="fw-semibold">{{ node.module.name }}</span>
+                      {% if node.levels %}
+                        <ul class="mb-0">
+                          {% for lv in node.levels %}
+                            <li>
+                              {{ lv.level.name }}
+                              {% if lv.sublevels %}
+                                <ul class="mb-0">
+                                  {% for sl in lv.sublevels %}
+                                    <li>{{ sl.name }}</li>
+                                  {% endfor %}
+                                </ul>
+                              {% endif %}
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
                 </ul>
-              {% else %}
-                <div class="doc-muted small">—</div>
-              {% endif %}
-            </div>
+              </div>
+            {% elif c.globals.modules %}
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                {% for m in c.globals.modules %}
+                  <span class="badge badge-soft">{{ m.name }}</span>
+                {% endfor %}
+              </div>
+              <div class="doc-muted small mt-2">
+                Nota: aún no hay niveles/subniveles seleccionados para armar el árbol.
+              </div>
+            {% else %}
+              <div class="doc-muted small mt-1">— Sin módulos seleccionados.</div>
+            {% endif %}
 
-            <div class="mt-2">
-              <div class="doc-muted small fw-semibold">Cajas</div>
-              {% if b.payload.cash_registers %}
-                <ul class="mb-0">
-                  {% for x in b.payload.cash_registers %}<li>{{ x.name }}</li>{% endfor %}
-                </ul>
-              {% else %}
-                <div class="doc-muted small">—</div>
-              {% endif %}
-            </div>
-
-            <div class="mt-2">
+            <div class="mt-3">
               <div class="doc-muted small fw-semibold">Paneles</div>
-              {% if b.payload.control_panels %}
+              {% if c.globals.control_panels %}
                 <ul class="mb-0">
-                  {% for x in b.payload.control_panels %}<li>{{ x.name }}</li>{% endfor %}
+                  {% for x in c.globals.control_panels %}<li>{{ x.name }}</li>{% endfor %}
                 </ul>
               {% else %}
                 <div class="doc-muted small">—</div>
@@ -216,9 +195,9 @@
 
             <div class="mt-2">
               <div class="doc-muted small fw-semibold">Vendedores</div>
-              {% if b.payload.sellers %}
+              {% if c.globals.sellers %}
                 <ul class="mb-0">
-                  {% for x in b.payload.sellers %}<li>{{ x.name }}</li>{% endfor %}
+                  {% for x in c.globals.sellers %}<li>{{ x.name }}</li>{% endfor %}
                 </ul>
               {% else %}
                 <div class="doc-muted small">—</div>
@@ -226,14 +205,13 @@
             </div>
           </div>
 
-          <!-- Globales -->
           <div class="col-md-6">
             <div class="fw-semibold">Permisos globales</div>
 
             <div class="mt-2">
               <div class="doc-muted small fw-semibold">Acciones</div>
-              {% if b.payload.actions_by_group %}
-                {% for g, rows in b.payload.actions_by_group.items %}
+              {% if c.globals.actions_by_group %}
+                {% for g, rows in c.globals.actions_by_group.items %}
                   <div class="mt-2">
                     <div class="fw-semibold small">{{ g }}</div>
                     <ul class="mb-0">
@@ -253,9 +231,9 @@
 
             <div class="mt-3">
               <div class="doc-muted small fw-semibold">Medios de pago habilitados</div>
-              {% if b.payload.payment_methods %}
+              {% if c.globals.payment_methods %}
                 <ul class="mb-0">
-                  {% for pm in b.payload.payment_methods %}<li>{{ pm.name }}</li>{% endfor %}
+                  {% for pm in c.globals.payment_methods %}<li>{{ pm.name }}</li>{% endfor %}
                 </ul>
               {% else %}
                 <div class="doc-muted small">—</div>
@@ -264,10 +242,10 @@
           </div>
         </div>
 
-        <!-- Matriz -->
+        <!-- Matriz (global por empresa) -->
         <div class="mt-3">
-          <div class="fw-semibold">Matriz de permisos (solo filas con checks)</div>
-          {% if b.payload.matrix %}
+          <div class="fw-semibold">Matriz de permisos</div>
+          {% if c.globals.matrix %}
             <div class="table-responsive border rounded mt-2">
               <table class="table table-sm mb-0">
                 <thead class="table-light">
@@ -282,7 +260,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for r in b.payload.matrix %}
+                  {% for r in c.globals.matrix %}
                     <tr>
                       <td class="fw-semibold">{{ r.permission.name }}</td>
                       <td class="text-center">{% if r.can_create %}✔{% endif %}</td>
@@ -301,6 +279,52 @@
           {% endif %}
         </div>
 
+        <!-- Scoped por sucursal: SOLO depósitos y cajas -->
+        <div class="mt-3">
+          <div class="fw-semibold">Sucursales (Depósitos y Cajas)</div>
+
+          <div class="table-responsive border rounded mt-2">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 28%">Sucursal</th>
+                  <th>Depósitos</th>
+                  <th>Cajas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in c.branches %}
+                  <tr>
+                    <td class="fw-semibold">
+                      {% if b.branch %}{{ b.branch.name }}{% else %}<span class="doc-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                      {% if b.scoped.warehouses %}
+                        <ul class="mb-0">
+                          {% for x in b.scoped.warehouses %}<li>{{ x.name }}</li>{% endfor %}
+                        </ul>
+                      {% else %}
+                        <span class="doc-muted">—</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if b.scoped.cash_registers %}
+                        <ul class="mb-0">
+                          {% for x in b.scoped.cash_registers %}<li>{{ x.name }}</li>{% endfor %}
+                        </ul>
+                      {% else %}
+                        <span class="doc-muted">—</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+
+        </div>
+
       {% endfor %}
 
       {% if request_obj.notes %}
@@ -310,7 +334,6 @@
       {% endif %}
 
       <div class="doc-hr"></div>
-
     </div>
   </div>
 

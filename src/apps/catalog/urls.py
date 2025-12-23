@@ -31,7 +31,6 @@ urlpatterns = [
          name="wizard_step_5_scoped"),
     path("wizard/review/", WizardStep6ReviewView.as_view(),
          name="wizard_step_6_review"),
-    path("requests/drafts/", RequestDetailView.as_view(), name="request_drafts"),
     # confirmación de envío
     path("requests/<int:pk>/submitted/",
          RequestSubmittedView.as_view(), name="wizard_submitted"),

@@ -14,6 +14,41 @@
     </a>
   </div>
 
+  <!-- Filtros -->
+  <form method="get" class="card shadow-sm mb-3">
+    <div class="card-body py-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label small mb-1">Buscar</label>
+          <input type="text" class="form-control"
+                 name="q"
+                 value="{{ q|default:'' }}"
+                 placeholder="Apellido, nombre, DNI, email o #ID">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small mb-1">Estado</label>
+          <select class="form-select" name="status">
+            <option value="">Todos</option>
+            <option value="DRAFT" {% if status == "DRAFT" %}selected{% endif %}>Borrador</option>
+            <option value="SUBMITTED" {% if status == "SUBMITTED" %}selected{% endif %}>Enviada</option>
+            <option value="APPROVED" {% if status == "APPROVED" %}selected{% endif %}>Aprobada</option>
+            <option value="REJECTED" {% if status == "REJECTED" %}selected{% endif %}>Rechazada</option>
+          </select>
+        </div>
+
+        <div class="col-md-3 d-flex gap-2">
+          <button class="btn btn-outline-primary w-100" type="submit">
+            Filtrar
+          </button>
+          <a class="btn btn-outline-secondary" href="{% url 'catalog:request_list' %}">
+            Limpiar
+          </a>
+        </div>
+      </div>
+    </div>
+  </form>
+
   <div class="card shadow-sm">
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -23,38 +58,56 @@
               <th style="width: 90px;">#</th>
               <th>Persona</th>
               <th>DNI</th>
-              <th>Tipo</th>
-              <th>Estado</th>
+              <th style="width: 140px;">Tipo</th>
+              <th style="width: 140px;">Estado</th>
               <th style="width: 190px;">Creada</th>
-              <th style="width: 150px;"></th>
+              <th style="width: 220px;"></th>
             </tr>
           </thead>
           <tbody>
             {% for r in requests %}
               <tr>
                 <td class="fw-semibold">#{{ r.id }}</td>
-                <td>{{ r.person_data.last_name }}, {{ r.person_data.first_name }}</td>
+
+                <td>
+                  <div class="fw-semibold">{{ r.person_data.last_name }}, {{ r.person_data.first_name }}</div>
+                  <div class="text-muted small">{{ r.person_data.email }}</div>
+                </td>
+
                 <td class="text-muted">{{ r.person_data.dni }}</td>
+
                 <td>{{ r.get_kind_display }}</td>
+
                 <td>
                   {% if r.status == "DRAFT" %}
-                    <span class="badge bg-secondary">Borrador</span>
+                    <span class="badge text-bg-secondary">Borrador</span>
                   {% elif r.status == "SUBMITTED" %}
-                    <span class="badge bg-primary">Enviada</span>
+                    <span class="badge text-bg-primary">Enviada</span>
                   {% elif r.status == "APPROVED" %}
-                    <span class="badge bg-success">Aprobada</span>
+                    <span class="badge text-bg-success">Aprobada</span>
                   {% elif r.status == "REJECTED" %}
-                    <span class="badge bg-danger">Rechazada</span>
+                    <span class="badge text-bg-danger">Rechazada</span>
                   {% else %}
-                    <span class="badge bg-dark">{{ r.status }}</span>
+                    <span class="badge text-bg-dark">{{ r.status }}</span>
                   {% endif %}
                 </td>
+
                 <td class="text-muted">{{ r.created_at|date:"d/m/Y H:i" }}</td>
+
                 <td class="text-end">
-                  <a class="btn btn-outline-secondary btn-sm"
-                     href="{% url 'catalog:wizard_step_6_review' %}">
-                    Ver
-                  </a>
+                  <div class="btn-group">
+                    <a class="btn btn-outline-secondary btn-sm"
+                       href="{% url 'catalog:request_detail' r.id %}">
+                      Ver detalle
+                    </a>
+
+                    {% if r.status == "DRAFT" %}
+                      <a class="btn btn-outline-primary btn-sm"
+                         href="{% url 'catalog:wizard_step_6_review' %}">
+                        Continuar
+                      </a>
+                    {% endif %}
+                  </div>
                 </td>
               </tr>
             {% empty %}
@@ -68,6 +121,36 @@
         </table>
       </div>
     </div>
+
+    {% if is_paginated %}
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </div>
+
+        <nav>
+          <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Anterior</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+            {% endif %}
+
+            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Siguiente</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+            {% endif %}
+          </ul>
+        </nav>
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
