@@ -2,7 +2,9 @@
 from pathlib import Path
 import os
 
+# /src/config/settings/base.py -> parents[2] = /src/config
 BASE_DIR = Path(__file__).resolve().parents[2]
+# /src
 PROJECT_DIR = BASE_DIR.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
@@ -17,11 +19,12 @@ INSTALLED_APPS = [
 
     "apps.core.apps.CoreConfig",
     "apps.catalog.apps.CatalogConfig",
-
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -35,7 +38,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [PROJECT_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -56,16 +59,25 @@ TIME_ZONE = "America/Argentina/Tucuman"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_URL = "/static/"
+STATIC_ROOT = PROJECT_DIR / "staticfiles"
+STATICFILES_DIRS = [PROJECT_DIR / "static"]
 
-MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = PROJECT_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
+
+# Correo (Gmail OAuth) - PROD override in production.py
+USE_GMAIL_OAUTH = False
+GMAIL_OAUTH_CLIENT_ID = ""
+GMAIL_OAUTH_CLIENT_SECRET = ""
+GMAIL_OAUTH_REFRESH_TOKEN = ""
+GMAIL_OAUTH_SENDER = ""
+
+# Destinatarios (default empty)
+CATALOG_IT_NOTIFY_EMAILS = []

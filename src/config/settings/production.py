@@ -71,7 +71,7 @@ STATICFILES_STORAGE = (
 
 CATALOG_IT_NOTIFY_EMAILS = os.getenv(
     "CATALOG_IT_NOTIFY_EMAILS",
-    "i.velazquez@pharmacenter.com.ar",
+    "i.velazquez@pharmacenter.com.ar,j.fiad@pharmacenter.com",
 ).split(",")
 
 USE_GMAIL_OAUTH = True

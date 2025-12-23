@@ -30,4 +30,4 @@ LOGGING = {
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "CatalogoPermisos <no-reply@local>"
-CATALOG_IT_NOTIFY_EMAILS = ["tu_mail@empresa.com", "it@empresa.com"]
+
