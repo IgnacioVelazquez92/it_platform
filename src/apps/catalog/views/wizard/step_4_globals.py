@@ -135,11 +135,12 @@ class WizardStep4GlobalsView(WizardBaseView):
 
             # Formsets
             action_fs = ActionValueFormSet(
+                prefix="actions",
                 initial=action_initial,
                 action_permissions=actions,
             )
-            matrix_fs = MatrixFormSet(initial=matrix_initial)
-            pay_fs = PaymentFormSet(initial=pay_initial)
+            matrix_fs = MatrixFormSet(prefix="matrix", initial=matrix_initial)
+            pay_fs = PaymentFormSet(prefix="payments", initial=pay_initial)
 
             # IMPORTANTÍSIMO: zip (modelo, form) para template limpio
             action_rows = list(zip(actions, action_fs.forms))
@@ -272,9 +273,9 @@ class WizardStep4GlobalsView(WizardBaseView):
 
         if req.same_modules_for_all:
             action_fs = ActionValueFormSet(
-                data=request.POST, action_permissions=actions)
-            matrix_fs = MatrixFormSet(data=request.POST)
-            pay_fs = PaymentFormSet(data=request.POST)
+                data=request.POST, prefix="actions", action_permissions=actions)
+            matrix_fs = MatrixFormSet(data=request.POST, prefix="matrix")
+            pay_fs = PaymentFormSet(data=request.POST, prefix="payments")
 
             if not (action_fs.is_valid() and matrix_fs.is_valid() and pay_fs.is_valid()):
                 return render(
