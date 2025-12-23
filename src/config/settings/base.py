@@ -2,10 +2,9 @@
 from pathlib import Path
 import os
 
-# /src/config/settings/base.py -> parents[2] = /src/config
-BASE_DIR = Path(__file__).resolve().parents[2]
-# /src
-PROJECT_DIR = BASE_DIR.parent
+# /app/src/config/settings/base.py -> parents[2] = /app/src
+PROJECT_DIR = Path(__file__).resolve().parents[2]
+BASE_DIR = PROJECT_DIR
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 
@@ -72,15 +71,19 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
 
-# Correo (Gmail OAuth)
+# Correo (Gmail OAuth) - NO lo toco
 USE_GMAIL_OAUTH = True
 GMAIL_OAUTH_CLIENT_ID = os.getenv("GMAIL_OAUTH_CLIENT_ID", "")
 GMAIL_OAUTH_CLIENT_SECRET = os.getenv("GMAIL_OAUTH_CLIENT_SECRET", "")
 GMAIL_OAUTH_REFRESH_TOKEN = os.getenv("GMAIL_OAUTH_REFRESH_TOKEN", "")
 GMAIL_OAUTH_SENDER = os.getenv("GMAIL_OAUTH_SENDER", "")
 
-# Destinatarios
+# Destinatarios - mejor por env, con fallback
 CATALOG_IT_NOTIFY_EMAILS = [
+    e.strip()
+    for e in os.getenv("CATALOG_IT_NOTIFY_EMAILS", "").split(",")
+    if e.strip()
+] or [
     "i.velazquez@pharmacenter.com.ar",
-    "j.fiad@pharmacenter.com",
+    "j.fiad@pharmacenter.com.ar",
 ]
