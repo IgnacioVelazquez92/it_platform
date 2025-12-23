@@ -85,5 +85,5 @@ CATALOG_IT_NOTIFY_EMAILS = [
     if e.strip()
 ] or [
     "i.velazquez@pharmacenter.com.ar",
-    "j.fiad@pharmacenter.com.ar",
+    "ignaciov92@gmail.com",
 ]
