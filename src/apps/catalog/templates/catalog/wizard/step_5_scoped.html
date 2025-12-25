@@ -5,9 +5,9 @@
   {% include "catalog/wizard/_progress.html" with step=5 total_steps=6 progress_percent=90 request_obj=request_obj %}
 
   <div class="mb-3">
-    <h3 class="mb-1">Accesos por empresa</h3>
+    <h3 class="mb-1">Accesos por empresa y sucursal</h3>
     <div class="text-muted small">
-      Paneles y vendedores se completan por empresa. Depósitos y cajas se completan por sucursal.
+      Paneles y vendedores se configuran por empresa. Depósitos y cajas se configuran por sucursal.
     </div>
   </div>
 
@@ -38,12 +38,15 @@
             >
               <div class="accordion-body">
 
+
+
                 {% if cb.company_form.non_field_errors %}
                   <div class="alert alert-danger py-2 mb-3">
                     {{ cb.company_form.non_field_errors }}
                   </div>
                 {% endif %}
 
+                <!-- Paneles y Vendedores (POR EMPRESA) -->
                 <div class="row g-3">
                   <!-- Paneles -->
                   <div class="col-md-6">
@@ -56,7 +59,6 @@
                     </div>
 
                     <div class="border rounded p-2 scoped-box" data-scope="panels">
-                      {# IMPORTANTE: renderizamos el field completo, NO inputs a mano #}
                       {{ cb.company_form.control_panels }}
                     </div>
 
@@ -89,6 +91,7 @@
                   </div>
                 </div>
 
+                <!-- Depósitos y Cajas por Sucursal -->
                 {% if cb.branches_blocks %}
                   <hr class="my-3">
 
@@ -170,8 +173,6 @@
                       </div>
                     {% endfor %}
                   </div>
-                {% else %}
-                  <div class="text-muted small mt-3">No hay sucursales seleccionadas para esta empresa.</div>
                 {% endif %}
 
               </div>

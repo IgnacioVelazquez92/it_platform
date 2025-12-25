@@ -29,12 +29,13 @@ class WizardStep2CompaniesView(WizardBaseView):
             raise AccessRequest.DoesNotExist
         return AccessRequest.objects.select_related("person_data").get(pk=req_id)
 
-    def _context_lists(self, *, form, req, selected_branch_ids: set[str] | None = None):
+    def _context_lists(self, *, form, req):
         """
-        Prepara estructuras para un template estable (sin hacks de templates):
+        Prepara estructuras para un template estable:
         - companies_qs: empresas activas
-        - company_blocks: lista [{company, branches}] para accordion
-        - selected_branch_ids: set[str] para marcar checkboxes
+        - company_blocks: lista [{company, branches}] para referencia (no para selección)
+
+        Nota: Las sucursales se eligen en Step 5 (scoped), no aquí.
         """
         companies_qs = Company.objects.filter(is_active=True).order_by("name")
         branches_qs = (
@@ -55,7 +56,6 @@ class WizardStep2CompaniesView(WizardBaseView):
             request_obj=req,
             companies_qs=companies_qs,
             company_blocks=company_blocks,
-            selected_branch_ids=selected_branch_ids or set(),
         )
 
     def get(self, request):
@@ -70,33 +70,24 @@ class WizardStep2CompaniesView(WizardBaseView):
         initial: dict = {}
         if wizard.get("company_ids"):
             initial["companies"] = wizard["company_ids"]
-        if wizard.get("branch_ids"):
-            initial["branches"] = wizard["branch_ids"]
         if wizard.get("same_modules_for_all") is not None:
             initial["same_modules_for_all"] = "1" if wizard["same_modules_for_all"] else "0"
 
         # Si no hay wizard pero ya hay items, prefill desde DB
         if not initial.get("companies") and req.items.exists():
             company_ids = []
-            branch_ids = []
-            for it in req.items.select_related("selection_set__company", "selection_set__branch"):
+            for it in req.items.select_related("selection_set__company"):
                 company_ids.append(it.selection_set.company_id)
-                if it.selection_set.branch_id:
-                    branch_ids.append(it.selection_set.branch_id)
 
             initial["companies"] = sorted(set(company_ids))
-            initial["branches"] = sorted(set(branch_ids))
             initial["same_modules_for_all"] = "1" if req.same_modules_for_all else "0"
 
         form = Step2CompaniesForm(initial=initial)
 
-        selected_branch_ids = {str(x) for x in (initial.get("branches") or [])}
-
         return render(
             request,
             self.template_name,
-            self._context_lists(form=form, req=req,
-                                selected_branch_ids=selected_branch_ids),
+            self._context_lists(form=form, req=req),
         )
 
     @transaction.atomic
@@ -109,15 +100,11 @@ class WizardStep2CompaniesView(WizardBaseView):
         wizard = self.get_wizard(request)
         form = Step2CompaniesForm(data=request.POST)
 
-        # Para re-render con errores: marcar branches seleccionadas
-        selected_branch_ids = set(request.POST.getlist("branches"))
-
         if not form.is_valid():
             return render(
                 request,
                 self.template_name,
-                self._context_lists(form=form, req=req,
-                                    selected_branch_ids=selected_branch_ids),
+                self._context_lists(form=form, req=req),
             )
 
         companies = list(form.cleaned_data["companies"])
@@ -146,11 +133,6 @@ class WizardStep2CompaniesView(WizardBaseView):
                     continue
                 ss.delete()
 
-        # Map: company_id -> branches seleccionadas
-        branches_by_company = defaultdict(list)
-        for b in branches:
-            branches_by_company[b.company_id].append(b)
-
         # Base template (si existe)
         template_id = wizard.get("template_id")
         base_selection = None
@@ -165,35 +147,20 @@ class WizardStep2CompaniesView(WizardBaseView):
 
         created_items = 0
 
-        # Crear items + selection sets
+        # Crear items + selection sets: UNO POR EMPRESA (sin sucursal)
+        # Las sucursales se configuran en Step 5 (scoped), no aquí.
+        # El parámetro branches se ignora en la creación de items (solo se usa para UI feedback).
         for company in companies:
-            selected_branches = branches_by_company.get(company.id, [])
-
-            if selected_branches:
-                # Ítem por sucursal seleccionada
-                for br in selected_branches:
-                    if base_selection:
-                        ss = clone_selection_set(
-                            base_selection, company=company, branch=br)
-                    else:
-                        ss = PermissionSelectionSet.objects.create(
-                            company=company, branch=br)
-
-                    AccessRequestItem.objects.create(
-                        request=req, selection_set=ss, order=created_items)
-                    created_items += 1
+            if base_selection:
+                ss = clone_selection_set(
+                    base_selection, company=company, branch=None)
             else:
-                # Ítem a nivel empresa (sin sucursal)
-                if base_selection:
-                    ss = clone_selection_set(
-                        base_selection, company=company, branch=None)
-                else:
-                    ss = PermissionSelectionSet.objects.create(
-                        company=company, branch=None)
+                ss = PermissionSelectionSet.objects.create(
+                    company=company, branch=None)
 
-                AccessRequestItem.objects.create(
-                    request=req, selection_set=ss, order=created_items)
-                created_items += 1
+            AccessRequestItem.objects.create(
+                request=req, selection_set=ss, order=created_items)
+            created_items += 1
 
         # Persistir wizard state para próximos steps
         wizard["company_ids"] = [c.id for c in companies]
