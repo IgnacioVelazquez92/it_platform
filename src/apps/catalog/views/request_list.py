@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.views.generic import ListView
 
-from apps.catalog.models.requests import AccessRequest
+from apps.catalog.models.requests import AccessRequest, RequestStatus
 
 
 class RequestListView(LoginRequiredMixin, ListView):
@@ -23,8 +23,21 @@ class RequestListView(LoginRequiredMixin, ListView):
         q = (self.request.GET.get("q") or "").strip()
         status = (self.request.GET.get("status") or "").strip()
 
+        user = self.request.user
+
+        # Non-superusers only see their own requests.
+        # Superusers see all users' requests but NOT drafts (to avoid huge lists).
+        if user.is_superuser:
+            qs = qs.exclude(status=RequestStatus.DRAFT)
+        else:
+            qs = qs.filter(owner=user)
+
+        # Apply status filter if provided. Superusers cannot filter drafts.
         if status:
-            qs = qs.filter(status=status)
+            if user.is_superuser and status == RequestStatus.DRAFT:
+                qs = qs.none()
+            else:
+                qs = qs.filter(status=status)
 
         if q:
             qs = qs.filter(
