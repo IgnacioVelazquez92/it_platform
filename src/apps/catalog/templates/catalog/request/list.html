@@ -80,15 +80,15 @@
 
                 <td>
                   {% if r.status == "DRAFT" %}
-                    <span class="badge text-bg-secondary">Borrador</span>
+                    <span class="badge bg-secondary">Borrador</span>
                   {% elif r.status == "SUBMITTED" %}
-                    <span class="badge text-bg-primary">Enviada</span>
+                    <span class="badge bg-primary">Enviada</span>
                   {% elif r.status == "APPROVED" %}
-                    <span class="badge text-bg-success">Aprobada</span>
+                    <span class="badge bg-success">Aprobada</span>
                   {% elif r.status == "REJECTED" %}
-                    <span class="badge text-bg-danger">Rechazada</span>
+                    <span class="badge bg-danger">Rechazada</span>
                   {% else %}
-                    <span class="badge text-bg-dark">{{ r.status }}</span>
+                    <span class="badge bg-dark">{{ r.status }}</span>
                   {% endif %}
                 </td>
 
