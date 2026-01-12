@@ -144,9 +144,9 @@
                     <div>
                       <div class="fw-semibold">{{ r.choice_label }}</div>
                       {% if r.data.value == "1" %}
-                        <div class="text-muted small">Cargás módulos/globales una sola vez. Luego ajustás solo lo scoped.</div>
+                        <div class="text-muted small">Se utiliza si el usuario tendrá los mismos módulos y permisos en todas las empresas</div>
                       {% else %}
-                        <div class="text-muted small">Útil si cada empresa requiere módulos/globales distintos.</div>
+                        <div class="text-muted small">Se utiliza si el usuario requiere módulos y permisos diferentes por empresa</div>
                       {% endif %}
                     </div>
                   </label>
