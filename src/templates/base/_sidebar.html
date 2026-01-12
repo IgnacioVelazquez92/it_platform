@@ -35,6 +35,13 @@
 
         <hr class="text-secondary my-3">
 
+        <!-- Cambiar contraseña -->
+        {% if user.is_authenticated %}
+        <a href="{% url 'password_change' %}" class="nav-link text-secondary px-2 mt-2">
+            <i class="bi bi-key me-2"></i>
+            Cambiar contraseña
+        </a>
+
         <!-- Logout -->
         <form method="post" action="{% url 'logout' %}" class="px-2 mt-2">
             {% csrf_token %}
@@ -43,6 +50,7 @@
                 Cerrar sesión
             </button>
         </form>
+        {% endif %}
 
     </nav>
 </aside>
