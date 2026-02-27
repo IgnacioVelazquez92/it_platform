@@ -23,6 +23,10 @@ from apps.catalog.models.selections import (
 )
 
 
+def _can_manage_templates(user) -> bool:
+    return bool(user.is_staff or user.is_superuser)
+
+
 # ──────────────────────────────────────────────
 # Lista
 # ──────────────────────────────────────────────
@@ -60,6 +64,7 @@ class TemplateListView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["q"] = (self.request.GET.get("q") or "").strip()
         ctx["department"] = (self.request.GET.get("department") or "").strip()
+        ctx["can_manage_templates"] = _can_manage_templates(self.request.user)
         return ctx
 
 
@@ -210,7 +215,7 @@ class TemplateDetailView(LoginRequiredMixin, DetailView):
             })
 
         ctx["companies"] = companies
-        ctx["can_edit"] = self.request.user.is_staff
+        ctx["can_edit"] = _can_manage_templates(self.request.user)
         return ctx
 
 
@@ -226,7 +231,7 @@ class TemplateEditView(LoginRequiredMixin, UpdateView):
 
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
-        if not self.request.user.is_staff:
+        if not _can_manage_templates(self.request.user):
             raise PermissionDenied
         return obj
 
@@ -246,7 +251,7 @@ class TemplateDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
-        if not self.request.user.is_staff:
+        if not _can_manage_templates(self.request.user):
             raise PermissionDenied
         return obj
 

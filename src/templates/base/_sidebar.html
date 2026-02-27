@@ -26,10 +26,12 @@
             Modelos de acceso
         </a>
 
+        {% if user.is_staff or user.is_superuser %}
         <a href="{% url 'catalog:template_wizard_start' %}" class="nav-link text-secondary">
             <i class="bi bi-plus-square me-2"></i>
             Nuevo modelo
         </a>
+        {% endif %}
 
         <hr class="text-secondary my-3">
 

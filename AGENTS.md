@@ -1,4 +1,4 @@
-# AGENTS.md — Contexto del proyecto IT Platform
+git pull origin main# AGENTS.md — Contexto del proyecto IT Platform
 
 > Fecha de última actualización: 26 de febrero de 2026 (revisión 3).
 > Este archivo describe el estado **actual** del proyecto y sirve de referencia para agentes de IA y nuevos colaboradores.

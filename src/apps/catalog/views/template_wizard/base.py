@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpRequest
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
@@ -17,6 +18,11 @@ class TemplateWizardBaseView(LoginRequiredMixin, View):
     step: int = 0
     total_steps: int = 3
     progress_percent: int = 0
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_staff and not request.user.is_superuser:
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
 
     def get_wizard(self, request: HttpRequest) -> dict:
         return request.session.get(TEMPLATE_WIZARD_SESSION_KEY, {})

@@ -7,10 +7,12 @@
       <h3 class="mb-1">Modelos de acceso</h3>
       <div class="text-muted">Perfiles reutilizables que pre-cargan el wizard de solicitudes.</div>
     </div>
-    <a class="btn btn-primary" href="{% url 'catalog:template_wizard_start' %}">
-      <i class="bi bi-plus-circle me-1"></i>
-      Nuevo modelo
-    </a>
+    {% if can_manage_templates %}
+      <a class="btn btn-primary" href="{% url 'catalog:template_wizard_start' %}">
+        <i class="bi bi-plus-circle me-1"></i>
+        Nuevo modelo
+      </a>
+    {% endif %}
   </div>
 
   <!-- Filtros -->
@@ -73,17 +75,21 @@
                      href="{% url 'catalog:template_detail' t.pk %}">
                     <i class="bi bi-eye me-1"></i>Ver
                   </a>
-                  <a class="btn btn-sm btn-outline-primary"
-                     href="{% url 'catalog:template_edit' t.pk %}">
-                    <i class="bi bi-pencil me-1"></i>Editar
-                  </a>
+                  {% if can_manage_templates %}
+                    <a class="btn btn-sm btn-outline-primary"
+                       href="{% url 'catalog:template_edit' t.pk %}">
+                      <i class="bi bi-pencil me-1"></i>Editar
+                    </a>
+                  {% endif %}
                 </td>
               </tr>
             {% empty %}
               <tr>
                 <td colspan="7" class="text-center text-muted py-4">
                   No hay modelos de acceso.
-                  <a href="{% url 'catalog:template_wizard_start' %}">Crear el primero</a>.
+                  {% if can_manage_templates %}
+                    <a href="{% url 'catalog:template_wizard_start' %}">Crear el primero</a>.
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}

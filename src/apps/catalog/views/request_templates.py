@@ -23,7 +23,7 @@ class RequestMakeTemplateView(View):
 
         # Ajustá esto a tu política real (ej: groups IT).
         # Para no bloquearte ahora: staff.
-        if not request.user.is_staff:
+        if not request.user.is_staff and not request.user.is_superuser:
             raise PermissionDenied
 
         ar = get_object_or_404(AccessRequest, pk=request_id)
