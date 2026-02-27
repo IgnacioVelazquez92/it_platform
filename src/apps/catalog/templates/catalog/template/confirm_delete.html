@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 540px;">
+  <div class="card shadow-sm border-danger">
+    <div class="card-body">
+      <h5 class="text-danger mb-1"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar modelo de acceso</h5>
+      <p class="text-muted small mb-3">Esta acción no se puede deshacer.</p>
+
+      <div class="bg-light border rounded p-3 mb-4">
+        <div class="fw-semibold">{{ template_obj.name }}</div>
+        {% if template_obj.department %}
+          <div class="text-muted small">Departamento: {{ template_obj.department }}</div>
+        {% endif %}
+        {% if template_obj.role_name %}
+          <div class="text-muted small">Rol: {{ template_obj.role_name }}</div>
+        {% endif %}
+        {% with cnt=template_obj.items.count %}
+          <div class="text-muted small mt-1">{{ cnt }} empresa{% if cnt != 1 %}s{% endif %} configurada{% if cnt != 1 %}s{% endif %}</div>
+        {% endwith %}
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="d-flex gap-2 justify-content-end">
+          <a class="btn btn-outline-secondary" href="{% url 'catalog:template_detail' template_obj.pk %}">
+            Cancelar
+          </a>
+          <button class="btn btn-danger" type="submit">
+            <i class="bi bi-trash me-1"></i>Sí, eliminar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

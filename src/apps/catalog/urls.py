@@ -11,6 +11,16 @@ from apps.catalog.views.wizard.step_6_review import WizardStep6ReviewView
 from apps.catalog.views.requests import RequestSubmittedView, RequestDetailView
 from apps.catalog.views.request_list import RequestListView
 from apps.catalog.views.request_templates import RequestMakeTemplateView
+from apps.catalog.views.templates import (
+    TemplateListView,
+    TemplateDetailView,
+    TemplateEditView,
+    TemplateDeleteView,
+)
+from apps.catalog.views.template_wizard.step_0_start import TemplateWizardStep0StartView
+from apps.catalog.views.template_wizard.step_2_modules import TemplateWizardStep2ModulesView
+from apps.catalog.views.template_wizard.step_3_globals import TemplateWizardStep3GlobalsView
+from apps.catalog.views.template_wizard.step_5_review import TemplateWizardStep5ReviewView
 
 
 app_name = "catalog"
@@ -44,4 +54,16 @@ urlpatterns = [
         RequestMakeTemplateView.as_view(),
         name="request_make_template",
     ),
+
+    # ── Templates / Modelos de acceso ──────────────────────────────────────────
+    path("templates/", TemplateListView.as_view(), name="template_list"),
+    path("templates/<int:pk>/", TemplateDetailView.as_view(), name="template_detail"),
+    path("templates/<int:pk>/edit/", TemplateEditView.as_view(), name="template_edit"),
+    path("templates/<int:pk>/delete/", TemplateDeleteView.as_view(), name="template_delete"),
+
+    # ── Template wizard (creación directa) ─────────────────────────────────────
+    path("templates/new/start/", TemplateWizardStep0StartView.as_view(), name="template_wizard_start"),
+    path("templates/new/modules/", TemplateWizardStep2ModulesView.as_view(), name="template_wizard_modules"),
+    path("templates/new/globals/", TemplateWizardStep3GlobalsView.as_view(), name="template_wizard_globals"),
+    path("templates/new/review/", TemplateWizardStep5ReviewView.as_view(), name="template_wizard_review"),
 ]

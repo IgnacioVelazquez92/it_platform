@@ -20,18 +20,16 @@
 
         <hr class="text-secondary my-3">
 
-        <!-- Perfiles / Templates (futuro) -->
-        <a href="#" class="nav-link text-secondary">
+        <!-- Perfiles / Templates -->
+        <a href="{% url 'catalog:template_list' %}" class="nav-link text-secondary">
             <i class="bi bi-people me-2"></i>
             Modelos de acceso
-            <span class="badge bg-secondary ms-auto">Próx.</span>
         </a>
-        <!--
-            Ejemplos futuros:
-            - Analista de compras
-            - Cajero
-            - Supervisor
-        -->
+
+        <a href="{% url 'catalog:template_wizard_start' %}" class="nav-link text-secondary">
+            <i class="bi bi-plus-square me-2"></i>
+            Nuevo modelo
+        </a>
 
         <hr class="text-secondary my-3">
 

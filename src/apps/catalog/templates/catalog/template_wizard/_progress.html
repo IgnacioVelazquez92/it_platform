@@ -1,0 +1,16 @@
+{# catalog/template_wizard/_progress.html #}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div class="fw-semibold">
+    {% if template_obj %}
+      Modelo: {{ template_obj.name }}
+    {% else %}
+      Nuevo modelo de acceso
+    {% endif %}
+  </div>
+  <div class="text-muted small">Paso {{ step|add:1 }} de {{ total_steps|default:3|add:1 }}</div>
+</div>
+
+<div class="progress mb-4" style="height: 10px;">
+  <div class="progress-bar" role="progressbar" style="width: {{ progress_percent|default:0 }}%;"></div>
+</div>

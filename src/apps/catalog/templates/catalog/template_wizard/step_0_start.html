@@ -1,0 +1,27 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+  {% include "catalog/template_wizard/_progress.html" %}
+
+  <div class="mb-3">
+    <h3 class="mb-1">Nuevo modelo de acceso</h3>
+    <div class="text-muted">Definí el nombre, departamento y rol del perfil.</div>
+  </div>
+
+  {% include "base/_messages.html" %}
+
+  <form method="post" class="card shadow-sm" novalidate>
+    {% csrf_token %}
+    <div class="card-body">
+      {% for field in form %}
+        {% include "base/_form_field.html" %}
+      {% endfor %}
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'catalog:template_list' %}">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Continuar →</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
