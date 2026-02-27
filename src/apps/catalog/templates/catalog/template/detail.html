@@ -1,0 +1,245 @@
+{% extends "base/base.html" %}
+{% load catalog_extras %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1100px;">
+
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h3 class="mb-0">{{ template_obj.name }}</h3>
+      <div class="text-muted small">
+        {% if template_obj.department %}Departamento: <span class="fw-semibold">{{ template_obj.department }}</span>{% endif %}
+        {% if template_obj.role_name %} — Rol: <span class="fw-semibold">{{ template_obj.role_name }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'catalog:template_list' %}">Volver</a>
+      {% if can_edit %}
+        <a class="btn btn-outline-primary" href="{% url 'catalog:template_edit' template_obj.pk %}">
+          <i class="bi bi-pencil me-1"></i>Editar
+        </a>
+        <a class="btn btn-outline-danger" href="{% url 'catalog:template_delete' template_obj.pk %}">
+          <i class="bi bi-trash me-1"></i>Eliminar
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Usar template en nueva solicitud -->
+  <div class="alert alert-info small py-2 mb-3">
+    <i class="bi bi-info-circle me-1"></i>
+    Para usar este modelo en una nueva solicitud, iniciá el
+    <a href="{% url 'catalog:wizard_step_0_start' %}">wizard de solicitudes</a>
+    y seleccioná "Desde modelo" en el primer paso.
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      {% if template_obj.notes %}
+        <p class="text-muted small mb-3">{{ template_obj.notes|linebreaksbr }}</p>
+        <hr class="my-3">
+      {% endif %}
+
+      {% if companies %}
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div>
+            <div class="fw-semibold">Empresas</div>
+            <div class="text-muted small">Navegá por empresa para ver accesos y scoped por sucursal.</div>
+          </div>
+        </div>
+
+        <!-- Tabs por empresa -->
+        <ul class="nav nav-tabs small" role="tablist">
+          {% for c in companies %}
+            <li class="nav-item" role="presentation">
+              <button class="nav-link py-2 {% if forloop.first %}active{% endif %}"
+                      data-bs-toggle="tab"
+                      data-bs-target="#company-{{ forloop.counter }}"
+                      type="button" role="tab">
+                {{ c.company.name }}
+              </button>
+            </li>
+          {% endfor %}
+        </ul>
+
+        <div class="tab-content border border-top-0 rounded-bottom p-2 bg-body">
+          {% for c in companies %}
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                 id="company-{{ forloop.counter }}" role="tabpanel">
+
+              <div class="border rounded p-3 small">
+
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div>
+                    <div class="fw-semibold">{{ c.company.name }}</div>
+                    <div class="text-muted small">Solo lectura. Solo se muestra lo marcado/habilitado.</div>
+                  </div>
+                </div>
+
+                <div class="row g-3">
+
+                  <!-- Módulos -->
+                  <div class="col-md-6">
+                    <div class="fw-semibold mb-1">Módulos / árbol</div>
+
+                    {% if c.payload.levels_tree %}
+                      <div class="soft-card">
+                        {% for node in c.payload.levels_tree %}
+                          <details class="clean" {% if forloop.first %}open{% endif %}>
+                            <summary>{{ node.module.name }}</summary>
+                            {% if node.levels %}
+                              <div class="ms-3 mt-1">
+                                {% for lv in node.levels %}
+                                  <details class="clean">
+                                    <summary class="fw-normal">{{ lv.level.name }}</summary>
+                                    {% if lv.sublevels %}
+                                      <ul class="tight small text-muted">
+                                        {% for sl in lv.sublevels %}
+                                          <li>{{ sl.name }}</li>
+                                        {% endfor %}
+                                      </ul>
+                                    {% else %}
+                                      <div class="text-muted small ms-3">—</div>
+                                    {% endif %}
+                                  </details>
+                                {% endfor %}
+                              </div>
+                            {% else %}
+                              <div class="text-muted small ms-3">—</div>
+                            {% endif %}
+                          </details>
+                        {% endfor %}
+                      </div>
+                    {% elif c.payload.modules %}
+                      <div class="soft-card">
+                        {% for m in c.payload.modules %}
+                          <span class="pill">{{ m.name }}</span>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <div class="text-muted small">— Sin módulos seleccionados.</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Acciones + Medios de pago -->
+                  <div class="col-md-5">
+                    <div class="fw-semibold mb-1">Permisos globales</div>
+
+                    <div class="mt-2">
+                      <div class="text-muted small fw-semibold mb-1">Acciones</div>
+                      {% if c.payload.actions_by_group %}
+                        <ul class="nav nav-tabs small" role="tablist">
+                          {% for g in c.payload.action_groups %}
+                            <li class="nav-item" role="presentation">
+                              <button class="nav-link py-2 {% if forloop.first %}active{% endif %}"
+                                      data-bs-toggle="tab"
+                                      data-bs-target="#act-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                                      type="button" role="tab">
+                                {{ g }}
+                              </button>
+                            </li>
+                          {% endfor %}
+                        </ul>
+                        <div class="tab-content border border-top-0 rounded-bottom p-2 bg-body">
+                          {% for g in c.payload.action_groups %}
+                            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+                                 id="act-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" role="tabpanel">
+                              <div class="row g-2">
+                                {% for row in c.payload.actions_by_group|get_item:g %}
+                                  <div class="col-12">
+                                    <div class="border rounded px-2 py-2">
+                                      <div class="d-flex align-items-start justify-content-between gap-3">
+                                        <div class="fw-semibold">{{ row.name }}</div>
+                                        <div class="text-muted">{{ row.val }}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                {% endfor %}
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <div class="text-muted small">—</div>
+                      {% endif %}
+                    </div>
+
+                    <div class="mt-3">
+                      <div class="text-muted small fw-semibold mb-1">Medios de pago habilitados</div>
+                      {% if c.payload.payment_methods %}
+                        {% for pm in c.payload.payment_methods %}<span class="pill">{{ pm.name }}</span>{% endfor %}
+                      {% else %}
+                        <div class="text-muted small">—</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div><!-- row -->
+
+                <hr class="my-3">
+
+                <!-- Matriz -->
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="fw-semibold">Matriz de permisos</div>
+                  <span class="text-muted small">Solo filas con al menos un check</span>
+                </div>
+
+                {% if c.payload.matrix %}
+                  <div class="border rounded matrix-scroll">
+                    <table class="table table-sm align-middle mb-0">
+                      <thead class="table-light matrix-head">
+                        <tr>
+                          <th style="min-width: 320px;">Permisos</th>
+                          <th class="text-center">Crear</th>
+                          <th class="text-center">Modificar</th>
+                          <th class="text-center">Autorizar</th>
+                          <th class="text-center">Cerrar</th>
+                          <th class="text-center">Anular</th>
+                          <th class="text-center">Actualiza vigencia</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for r in c.payload.matrix %}
+                          <tr>
+                            <td class="fw-semibold">{{ r.permission.name }}</td>
+                            <td class="text-center">{% if r.can_create %}✔{% endif %}</td>
+                            <td class="text-center">{% if r.can_update %}✔{% endif %}</td>
+                            <td class="text-center">{% if r.can_authorize %}✔{% endif %}</td>
+                            <td class="text-center">{% if r.can_close %}✔{% endif %}</td>
+                            <td class="text-center">{% if r.can_cancel %}✔{% endif %}</td>
+                            <td class="text-center">{% if r.can_update_validity %}✔{% endif %}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                {% else %}
+                  <div class="text-muted small">—</div>
+                {% endif %}
+
+              </div><!-- border rounded -->
+            </div><!-- tab-pane -->
+          {% endfor %}
+        </div>
+
+      {% else %}
+        <div class="text-muted small">Sin ítems de empresa.</div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .soft-card { background:#fbfcfd; border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:10px; }
+  .pill { display:inline-flex; align-items:center; padding:.22rem .5rem; border-radius:999px; border:1px solid #e9ecef; background:#fff; font-size:.85rem; margin:0 .35rem .35rem 0; }
+  details.clean > summary { list-style:none; cursor:pointer; user-select:none; padding:.2rem 0; font-weight:600; }
+  details.clean > summary::-webkit-details-marker { display:none; }
+  details.clean > summary:before { content:"▸"; display:inline-block; width:1.1rem; color:#6c757d; }
+  details.clean[open] > summary:before { content:"▾"; }
+  .tight { margin:0; padding-left:1.1rem; }
+  .tight li { margin:.12rem 0; }
+  .matrix-scroll { max-height: 420px; overflow: auto; }
+  .matrix-head th { position: sticky; top: 0; z-index: 2; }
+</style>
+{% endblock %}

@@ -137,13 +137,15 @@ class WizardStep2CompaniesView(WizardBaseView):
         template_id = wizard.get("template_id")
         base_selection = None
         if template_id:
-            tpl = (
-                AccessTemplate.objects.select_related("selection_set")
-                .filter(pk=template_id, is_active=True)
-                .first()
-            )
+            tpl = AccessTemplate.objects.select_related("selection_set").prefetch_related(
+                "items__selection_set"
+            ).filter(pk=template_id, is_active=True).first()
             if tpl:
                 base_selection = tpl.selection_set
+                if base_selection is None:
+                    first_item = tpl.items.order_by("order", "id").first()
+                    if first_item:
+                        base_selection = first_item.selection_set
 
         created_items = 0
 

@@ -1,312 +1,250 @@
-# IT Platform — Resumen estructural
+# IT Platform (Pharmacenter)
 
-## Árbol del proyecto
+Aplicación Django para gestionar solicitudes de acceso al ERP mediante un wizard multi-paso, con catálogos importables desde Excel, reglas de visibilidad y generación de plantillas reutilizables.
+
+## Contexto rápido (IA / onboarding)
+
+- Framework: Django `6.0`
+- App principal de negocio: `src/apps/catalog`
+- Flujo central: wizard de solicitud (`step_0` a `step_6`)
+- Objeto principal: `AccessRequest`
+- Reutilización de configuraciones: `AccessTemplate`
+- Catálogos cargados por management commands desde `permisos.xlsx` y `Configuraciones.xlsx`
+- Entorno local por defecto: SQLite (`config.settings.development`)
+- Entorno productivo: PostgreSQL vía `DATABASE_URL` (`config.settings.production`)
+
+## Estructura del proyecto
 
 ```text
-src/
-├─ manage.py
-├─ config/
-│  ├─ urls.py
-│  ├─ asgi.py
-│  ├─ wsgi.py
-│  └─ settings/
-│     ├─ base.py
-│     ├─ development.py
-│     └─ production.py
-├─ templates/
-│  ├─ base/
-│  │  ├─ base.html
-│  │  ├─ _sidebar.html
-│  │  ├─ _messages.html
-│  │  ├─ _form_errors.html
-│  │  └─ _form_field.html
-│  ├─ home/
-│  │  └─ dashboard.html
-│  └─ registration/
-│     ├─ login.html
-│     └─ logged_out.html
-├─ static/
-│  ├─ vendor/
-│  │  └─ bootstrap/
-│  │     ├─ css/
-│  │     └─ js/
-│  └─ app/
-│     ├─ css/
-│     │  └─ app.css
-│     └─ js/
-│        └─ app.js
-└─ apps/
-   ├─ core/
-   │  ├─ apps.py
-   │  ├─ views.py
-   │  ├─ urls.py
-   │  ├─ models.py
-   │  └─ migrations/
-   └─ catalog/
-      ├─ apps.py
-      ├─ admin.py
-      ├─ urls.py
-      ├─ views.py
-      ├─ admin/
-      │  ├─ __init__.py
-      │  ├─ modules_admin.py
-      │  ├─ scoped_admin.py
-      │  ├─ global_ops_admin.py
-      │  ├─ rules_admin.py
-      │  ├─ selections_admin.py
-      │  ├─ requests_admin.py
-      │  ├─ templates_admin.py
-      │  └─ person_admin.py
-      ├─ forms/
-      │  ├─ __init__.py
-      │  ├─ bootstrap_mixins.py
-      │  ├─ helpers.py
-      │  ├─ helpers_globals.py
-      │  ├─ person.py
-      │  ├─ start.py
-      │  ├─ step_2_companies.py
-      │  ├─ step_3_modules.py
-      │  ├─ step_4_globals.py
-      │  ├─ step_5_scoped.py
-      │  └─ visibility.py
-      ├─ models/
-      │  ├─ __init__.py
-      │  ├─ person.py
-      │  ├─ requests.py
-      │  ├─ templates.py
-      │  ├─ selections.py
-      │  ├─ modules.py
-      │  ├─ rules.py
-      │  └─ permissions/
-      │     ├─ __init__.py
-      │     ├─ scoped.py
-      │     ├─ global_ops.py
-      │     └─ assignments.py
-      ├─ views/
-      │  ├─ __init__.py
-      │  ├─ requests.py
-      │  ├─ request_list.py
-      │  └─ wizard/
-      │     ├─ __init__.py
-      │     ├─ base.py
-      │     ├─ step_0_start.py
-      │     ├─ step_1_person.py
-      │     ├─ step_2_companies.py
-      │     ├─ step_3_modules.py
-      │     ├─ step_4_globals.py
-      │     ├─ step_5_scoped.py
-      │     └─ step_6_review.py
-      ├─ templates/
-      │  └─ catalog/
-      │     ├─ requests/
-      │     ├─ template_pick/
-      │     ├─ wizard/
-      │     │  ├─ _progress.html
-      │     │  ├─ step_0_start.html
-      │     │  ├─ step_1_person.html
-      │     │  ├─ step_2_companies.html
-      │     │  ├─ step_3_modules.html
-      │     │  ├─ step_4_globals.html
-      │     │  ├─ step_5_scoped.html
-      │     │  └─ step_6_review_document.html
-      │     └─ request/
-      │        └─ drafts.html
-      ├─ services/
-      │  ├─ templates.py
-      │  └─ template_from_request.py
-      ├─ management/
-      │  ├─ __init__.py
-      │  └─ commands/
-      │     ├─ __init__.py
-      │     ├─ bootstrap_catalog.py
-      │     ├─ bootstrap_visibility_rules.py
-      │     ├─ import_modules_from_excel.py
-      │     ├─ import_scoped_from_excel.py
-      │     └─ import_action_permissions_from_excel.py
-      └─ migrations/
+.
+├─ src/
+│  ├─ manage.py
+│  ├─ config/
+│  │  ├─ urls.py
+│  │  └─ settings/
+│  │     ├─ base.py
+│  │     ├─ development.py
+│  │     └─ production.py
+│  ├─ apps/
+│  │  ├─ core/
+│  │  │  ├─ urls.py
+│  │  │  └─ views.py
+│  │  └─ catalog/
+│  │     ├─ urls.py
+│  │     ├─ models/
+│  │     │  ├─ modules.py
+│  │     │  ├─ rules.py
+│  │     │  ├─ selections.py
+│  │     │  ├─ requests.py
+│  │     │  ├─ templates.py
+│  │     │  └─ permissions/
+│  │     │     ├─ scoped.py
+│  │     │     ├─ global_ops.py
+│  │     │     └─ assignments.py
+│  │     ├─ forms/
+│  │     ├─ views/
+│  │     │  ├─ wizard/
+│  │     │  ├─ requests.py
+│  │     │  ├─ request_list.py
+│  │     │  └─ request_templates.py
+│  │     ├─ services/
+│  │     ├─ admin/
+│  │     ├─ management/commands/
+│  │     └─ templates/catalog/
+│  ├─ templates/
+│  │  ├─ base/
+│  │  ├─ home/
+│  │  └─ registration/
+│  └─ static/
+├─ requirements.txt
+├─ permisos.xlsx
+└─ Configuraciones.xlsx
 ```
 
----
+## Dominio funcional (catalog)
 
-## Descripciones por archivo
+### Catálogos base
 
-### apps/catalog/forms
+- `ErpModule`, `ErpModuleLevel`, `ErpModuleSubLevel`: árbol Módulo/Nivel/Subnivel.
+- Scoped: `Company`, `Branch`, `Warehouse`, `CashRegister`, `ControlPanel`, `Seller`.
+- Globales: `ActionPermission`, `MatrixPermission`, `PaymentMethodPermission`.
 
-- `bootstrap_mixins.py`  
-  BootstrapFormMixin: renderizado automático de forms con clases Bootstrap.
+### Reglas de visibilidad
 
-- `helpers.py`  
-  Funciones de validación y sincronización de selecciones (sync_through_rows, ensure_global_rows_exist).
+- `PermissionBlock`: bloque UI gobernable por reglas.
+- `PermissionVisibilityRule`: regla con prioridad.
+- `PermissionVisibilityTrigger`: dispara por módulo/nivel/subnivel.
+- `PermissionVisibilityRuleBlock`: relación regla -> bloques mostrados.
 
-- `helpers_globals.py`  
-  Helpers para permisos globales y replicación entre selection_sets (replicate_globals).
+### Selecciones (payload reusable)
 
-- `person.py`  
-  RequestPersonDataForm: datos de solicitante.
+- `PermissionSelectionSet`: contenedor de permisos seleccionados para una empresa/sucursal.
+- Globales elegidos: `SelectionSetActionValue`, `SelectionSetMatrixPermission`, `SelectionSetPaymentMethod`.
+- Scoped elegidos: `SelectionSetWarehouse`, `SelectionSetCashRegister`, `SelectionSetControlPanel`, `SelectionSetSeller`.
+- Módulos elegidos: `SelectionSetModule`, `SelectionSetLevel`, `SelectionSetSubLevel`.
 
-- `start.py`  
-  StartForm: selección de plantilla inicial.
+### Objetos de negocio
 
-- `step_2_companies.py`  
-  TemplateCompaniesForm: empresas y flag same_modules_for_all.
+- `AccessRequest`: solicitud principal (estado, solicitante, owner).
+- `AccessRequestItem`: línea por empresa/sucursal (multi-empresa).
+- `AccessTemplate`: plantilla reutilizable.
+- `AccessTemplateItem`: líneas de plantilla (equivalentes a request items).
 
-- `step_3_modules.py`  
-  SelectionSetModulesForm: selección de módulos por empresa.
+## Flujo del wizard
 
-- `step_4_globals.py`  
-  SelectionSetScopeModulesForm, SelectionSetScopedSelectionsForm: scopes globales.
+Implementación en `src/apps/catalog/views/wizard/`:
 
-- `step_5_scoped.py`  
-  CompanyScopedForm, BranchScopedForm: paneles, vendedores, depósitos, cajas por empresa/sucursal. NoValidationMultipleChoiceField para validación en clean\_\*.
+1. `step_0_start.py`: modo de inicio (desde cero o template).
+2. `step_1_person.py`: datos personales; crea/actualiza `AccessRequest`.
+3. `step_2_companies.py`: alcance por empresa y flag `same_modules_for_all`.
+4. `step_3_modules.py`: módulos + subniveles (globales o por item).
+5. `step_4_globals.py`: permisos globales (acciones, matriz, medios de pago).
+6. `step_5_scoped.py`: paneles, vendedores, depósitos, cajas.
+7. `step_6_review.py`: revisión final, envío y notificación email.
 
-- `visibility.py`  
-  VisibilityRulesForm: reglas de visibilidad de módulos.
+Contexto de sesión del wizard:
 
-### apps/catalog/models
+- Clave de sesión: `catalog_wizard`
+- Datos habituales: `request_id`, `template_id`, `company_ids`, `branch_ids`, `same_modules_for_all`
 
-- `person.py`  
-  RequestPersonData: datos personales del solicitante.
+## URLs principales
 
-- `requests.py`  
-  AccessRequest, AccessRequestItem: solicitudes de acceso con flag same_modules_for_all.
+- Base app: `src/config/urls.py`
+- Home/login/logout/password change: `src/apps/core/urls.py`
+- Catálogo: `src/apps/catalog/urls.py`
 
-- `templates.py`  
-  SelectionTemplate, SelectionTemplateModule: plantillas reutilizables.
+Rutas de catálogo relevantes:
 
-- `selections.py`  
-  PermissionSelectionSet, SelectionSetModule, SelectionSetLevel, SelectionSetSublevel: scopes y módulos.
+- `/catalog/wizard/start/`
+- `/catalog/wizard/person/`
+- `/catalog/wizard/companies/`
+- `/catalog/wizard/modules/`
+- `/catalog/wizard/globals/`
+- `/catalog/wizard/scoped/`
+- `/catalog/wizard/review/`
+- `/catalog/requests/`
+- `/catalog/requests/<id>/`
+- `/catalog/requests/<id>/make-template/`
 
-- `modules.py`  
-  Module, ModuleAction: módulos del sistema y acciones.
+## Setup local
 
-- `rules.py`  
-  ModuleVisibilityRule: visibilidad condicional de módulos.
+### 1) Instalar dependencias
 
-- `permissions/scoped.py`  
-  Company, Branch, Warehouse, CashRegister, ControlPanel, Seller: entidades de scope (empresa/sucursal/depósito/caja/panel/vendedor).
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-- `permissions/global_ops.py`  
-  ActionPermission, MatrixPermission, PaymentMethod: permisos globales.
+### 2) Variables de entorno mínimas
 
-- `permissions/assignments.py`  
-  SelectionSetControlPanel, SelectionSetSeller, SelectionSetWarehouse, SelectionSetCashRegister: asignaciones de scope a selection_set.
+`src/manage.py` carga `.env` desde la raíz del repo y usa por defecto:
 
-### apps/catalog/views
+- `DJANGO_SETTINGS_MODULE=config.settings.development`
 
-- `wizard/base.py`  
-  WizardBaseView: clase base del wizard con gestión de sesión y contexto.
+Variables sugeridas para local:
 
-- `wizard/step_0_start.py`  
-  WizardStep0StartView: selección de modo (desde plantilla o desde cero) y plantilla inicial.
+```dotenv
+SECRET_KEY=dev-secret
+DEBUG=1
+DJANGO_SETTINGS_MODULE=config.settings.development
+ALLOWED_HOSTS=127.0.0.1,localhost
+```
 
-- `wizard/step_1_person.py`  
-  WizardStep1PersonView: datos personales del solicitante.
+### 3) Migrar y correr
 
-- `wizard/step_2_companies.py`  
-  WizardStep2CompaniesView: empresas, sucursales y flag same_modules_for_all.
+```bash
+cd src
+python manage.py migrate
+python manage.py runserver
+```
 
-- `wizard/step_3_modules.py`  
-  WizardStep3ModulesView: selección de módulos por empresa.
+## Carga de catálogos
 
-- `wizard/step_4_globals.py`  
-  WizardStep4GlobalsView: scopes globales y permisos.
+Comandos disponibles en `src/apps/catalog/management/commands/`:
 
-- `wizard/step_5_scoped.py`  
-  WizardStep5ScopedView: paneles, vendedores, depósitos, cajas por empresa/sucursal.
+```bash
+cd src
+python manage.py import_modules_from_excel --file ../permisos.xlsx
+python manage.py import_scoped_from_excel --file ../Configuraciones.xlsx
+python manage.py import_action_permissions_from_excel --file ../Configuraciones.xlsx
+python manage.py bootstrap_visibility_rules
+```
 
-- `wizard/step_6_review.py`  
-  WizardStep6ReviewView: revisión, generación de documento y envío de solicitud.
+Bootstrap integral:
 
-- `request_list.py`  
-  RequestListView: listado de solicitudes.
+```bash
+cd src
+python manage.py bootstrap_catalog
+```
 
-- `requests.py`  
-  RequestDetailView, RequestSubmittedView: detalle y confirmación de solicitudes.
+Opcionales:
 
-### apps/catalog/services
+- `--dry-run` en importadores (simula sin persistir)
+- `bootstrap_catalog --create-superuser` (usa variables `DJANGO_SUPERUSER_*`)
+- `bootstrap_catalog --create-superuser --write-env` (solo local)
 
-- `templates.py`  
-  clone_selection_set: clonación de selection_set para plantillas reutilizables.
+## Plantillas desde solicitudes
 
-- `template_from_request.py`  
-  create_template_from_request: genera plantilla desde solicitud de acceso.
+- Vista: `src/apps/catalog/views/request_templates.py`
+- Servicio: `src/apps/catalog/services/template_from_request.py`
 
-### apps/catalog/admin
+Regla importante:
 
-- `person_admin.py`  
-  RequestPersonDataAdmin.
+- Solo se puede crear template desde solicitudes `SUBMITTED` o `APPROVED`.
 
-- `requests_admin.py`  
-  AccessRequestAdmin, AccessRequestItemAdmin.
+## Email / notificaciones
 
-- `templates_admin.py`  
-  SelectionTemplateAdmin, SelectionTemplateModuleAdmin.
+En `step_6_review.py` se notifica a IT al enviar solicitud:
 
-- `selections_admin.py`  
-  PermissionSelectionSetAdmin, SelectionSetModuleAdmin, SelectionSetLevelAdmin, SelectionSetSublevelAdmin.
+- En desarrollo: backend de consola (si no se usa OAuth).
+- En producción: Gmail API OAuth (`google-api-python-client`, `google-auth`).
 
-- `modules_admin.py`  
-  ModuleAdmin, ModuleActionAdmin.
+Variables relevantes:
 
-- `rules_admin.py`  
-  ModuleVisibilityRuleAdmin.
+- `CATALOG_IT_NOTIFY_EMAILS`
+- `USE_GMAIL_OAUTH`
+- `GMAIL_OAUTH_SENDER`
+- `GMAIL_OAUTH_CLIENT_ID`
+- `GMAIL_OAUTH_CLIENT_SECRET`
+- `GMAIL_OAUTH_REFRESH_TOKEN`
 
-- `scoped_admin.py`  
-  CompanyAdmin, BranchAdmin, WarehouseAdmin, CashRegisterAdmin, ControlPanelAdmin, SellerAdmin.
+## Admin
 
-- `global_ops_admin.py`  
-  ActionPermissionAdmin, MatrixPermissionAdmin, PaymentMethodAdmin, SelectionSetControlPanelAdmin, SelectionSetSellerAdmin, SelectionSetWarehouseAdmin, SelectionSetCashRegisterAdmin.
+Registros admin organizados por módulo en `src/apps/catalog/admin/` y cargados desde `src/apps/catalog/admin/__init__.py`.
 
-### apps/catalog/management/commands
+Cobertura:
 
-- `bootstrap_catalog.py`  
-  Inicializa el catálogo con datos básicos del sistema.
+- catálogos ERP/scoped/globales
+- reglas de visibilidad
+- selections
+- requests/templates
+- datos personales
 
-- `bootstrap_visibility_rules.py`  
-  Crea reglas de visibilidad predeterminadas.
+## Guía de cambios (para IA)
 
-- `import_modules_from_excel.py`  
-  Importa módulos desde Excel.
+Si necesitás modificar comportamiento, este es el orden recomendado:
 
-- `import_scoped_from_excel.py`  
-  Importa entidades de scope (companies, branches, warehouses, cash registers, control panels, sellers) desde Excel.
+1. Verificar modelo afectado en `models/`.
+2. Verificar form asociado en `forms/`.
+3. Ajustar step del wizard en `views/wizard/`.
+4. Ajustar template en `templates/catalog/wizard/`.
+5. Revisar admin/commands si impacta catálogos.
 
-- `import_action_permissions_from_excel.py`  
-  Importa permisos de acciones desde Excel.
+Invariantes importantes:
 
-### templates/catalog/wizard
+- `AccessRequest.owner` no puede quedar nulo.
+- `AccessRequestItem` representa la fuente de verdad multi-empresa.
+- `same_modules_for_all` cambia lógica de steps 3 y 4.
+- `PermissionSelectionSet.branch` debe pertenecer a `company`.
+- Plantillas nuevas se construyen clonando `selection_sets`, no referenciando directo.
 
-- `_progress.html`  
-  Barra de progreso del wizard.
+## Estado del README
 
-- `step_0_start.html`  
-  Selección de modo y plantilla inicial.
+Este README fue actualizado contra el estado actual del código del repositorio.
+Para mantenerlo vigente, priorizar cambios en:
 
-- `step_1_person.html`  
-  Carga de datos personales.
-
-- `step_2_companies.html`  
-  Selección de empresas, sucursales e indicador de módulos compartidos.
-
-- `step_3_modules.html`  
-  Selección de módulos por empresa.
-
-- `step_4_globals.html`  
-  Permisos globales (acciones, matriz, medios de pago).
-
-- `step_5_scoped.html`  
-  Paneles, vendedores, depósitos, cajas por empresa/sucursal (accordion).
-
-- `step_6_review_document.html`  
-  Revisión final y generación de documento de solicitud.
-
-### apps/core
-
-- `views.py`  
-  HomeDashboardView, LogoutConfirmView.
-
-- `urls.py`  
-  Rutas base (home, login, logout).
-
-- `models.py`  
-  Modelos transversales (si aplican).
+- `src/apps/catalog/models/`
+- `src/apps/catalog/views/wizard/`
+- `src/apps/catalog/management/commands/`
+- `src/apps/catalog/urls.py`
