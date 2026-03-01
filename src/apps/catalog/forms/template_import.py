@@ -2,16 +2,9 @@ from __future__ import annotations
 
 from django import forms
 
-from apps.catalog.models import Company
-
 
 class TemplateExcelImportForm(forms.Form):
     excel_file = forms.FileField(label="Excel .xlsx")
-    company = forms.ModelChoiceField(
-        label="Empresa base",
-        queryset=Company.objects.filter(is_active=True).order_by("name"),
-        help_text="Se usa solo para el item base tecnico del template.",
-    )
     replace_existing = forms.BooleanField(
         label="Reemplazar templates existentes",
         required=False,

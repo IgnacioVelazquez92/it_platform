@@ -169,7 +169,6 @@ class AccessTemplateAdmin(admin.ModelAdmin):
                     result = import_templates_from_excel(
                         file_obj=form.cleaned_data["excel_file"],
                         owner=request.user,
-                        company=form.cleaned_data["company"],
                         replace_existing=bool(form.cleaned_data["replace_existing"]),
                     )
                 except TemplateExcelImportError as exc:

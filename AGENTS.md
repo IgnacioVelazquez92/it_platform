@@ -229,7 +229,7 @@ src/
       admin/          # Admin por entidad (global_ops, modules, person, requests, rules, scoped, selections, templates)
                       # templates_admin.py agrega URL admin `import-excel/` para carga masiva de templates
       forms/          # bootstrap_mixins, helpers, helpers_globals, person, start, template_meta, template_start, step_2..5, visibility
-                      # template_import.py -> TemplateExcelImportForm(excel_file, company, replace_existing)
+                      # template_import.py -> TemplateExcelImportForm(excel_file, replace_existing)
       management/commands/  # bootstrap_catalog, import_access_templates_excel
       migrations/
       models/         # modules, person, requests, rules, selections, templates + permissions/

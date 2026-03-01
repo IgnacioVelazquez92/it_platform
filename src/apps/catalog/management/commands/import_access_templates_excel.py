@@ -25,7 +25,7 @@ class Command(BaseCommand):
             "--company-id",
             type=int,
             default=None,
-            help="Empresa base para crear el item tecnico del template.",
+            help="Empresa base tecnica opcional. Si no se informa, usa la misma resolucion interna del wizard.",
         )
         parser.add_argument(
             "--replace-existing",

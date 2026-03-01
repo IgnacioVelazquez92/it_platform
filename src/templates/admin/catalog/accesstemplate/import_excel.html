@@ -4,9 +4,17 @@
   <div id="content-main">
     <h1>Importar templates desde Excel</h1>
     <p>Cada solapa del archivo se procesa como un template base global.</p>
+    <p>La empresa tecnica base se resuelve internamente y no limita el uso del template.</p>
 
     <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
+      {% if form.non_field_errors %}
+        <ul class="messagelist">
+          {% for error in form.non_field_errors %}
+            <li class="error">{{ error }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
       <fieldset class="module aligned">
         {{ form.as_p }}
       </fieldset>

@@ -273,14 +273,10 @@ def _resolve_company(*, company: Company | None) -> Company:
     if company is not None:
         return company
 
-    active_companies = list(Company.objects.filter(is_active=True).order_by("name")[:2])
-    if not active_companies:
+    resolved = Company.objects.filter(is_active=True).order_by("name").first()
+    if resolved is None:
         raise TemplateExcelImportError("No hay empresas activas para crear el item base del template.")
-    if len(active_companies) > 1:
-        raise TemplateExcelImportError(
-            "Hay mas de una empresa activa. Indicar explicitamente la empresa base para la importacion."
-        )
-    return active_companies[0]
+    return resolved
 
 
 @transaction.atomic
