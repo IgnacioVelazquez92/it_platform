@@ -169,6 +169,7 @@ catalog:template_wizard_review    → templates/new/review/
 | `clone_selection_set(source)` | `services/templates.py` | Deep-clone de un `PermissionSelectionSet`. Usado al inicializar desde template y al crear templates. |
 | `create_template_from_request(ar, name, …)` | `services/template_from_request.py` | Crea un `AccessTemplate` desde un request SUBMITTED/APPROVED. |
 | `create_template_directly(name, department, role_name, items_data, owner)` | `services/templates.py` | Crea un `AccessTemplate` directamente (sin request previo), a partir de datos del wizard de templates. |
+| `import_templates_from_excel(file_obj, owner, company=None, replace_existing=False)` | `services/template_excel_import.py` | Importa templates desde un `.xlsx`; cada solapa se mapea a un `AccessTemplate`, resuelve módulos/subniveles y `ActionPermission`, recrea el item base y sincroniza el `selection_set` legacy para compatibilidad. |
 
 ---
 
@@ -204,6 +205,7 @@ catalog:template_wizard_review    → templates/new/review/
 - **CRUD completo de `AccessTemplate`**: lista (paginada, filtros), detalle (árbol completo), edit metadata, delete con cascada
 - **Wizard de creación directa de templates** (6 pasos) — completamente funcional
 - **Wizard de creación directa de templates** (4 pasos: start/modules/globals/review) — completamente funcional y sin selección de empresa/sucursal en UI
+- **Importación masiva de templates desde Excel**: disponible en Django admin de `AccessTemplate` y con management command `import_access_templates_excel`; procesa una solapa por template y puede reemplazar existentes.
 
 ### ⚠️ Pendiente / parcial
 
@@ -225,11 +227,14 @@ src/
   apps/
     catalog/
       admin/          # Admin por entidad (global_ops, modules, person, requests, rules, scoped, selections, templates)
+                      # templates_admin.py agrega URL admin `import-excel/` para carga masiva de templates
       forms/          # bootstrap_mixins, helpers, helpers_globals, person, start, template_meta, template_start, step_2..5, visibility
-      management/commands/  # bootstrap_catalog
+                      # template_import.py -> TemplateExcelImportForm(excel_file, company, replace_existing)
+      management/commands/  # bootstrap_catalog, import_access_templates_excel
       migrations/
       models/         # modules, person, requests, rules, selections, templates + permissions/
       services/       # templates.py (clone_selection_set, create_template_from_request, create_template_directly)
+                      # template_excel_import.py -> import_templates_from_excel(file_obj, owner, company=None, replace_existing=False)
       templates/catalog/
         request/      # detail.html, list.html, submitted.html
         template/     # list.html, detail.html, edit.html, delete.html, confirm_delete.html
@@ -245,6 +250,7 @@ src/
     core/
   config/settings/    # base, development, production
   templates/
+    admin/catalog/accesstemplate/  # change_list.html (botón importar), import_excel.html (formulario de carga)
     base/             # base.html, _sidebar.html, _form_field.html, _form_errors.html, _messages.html
     home/dashboard.html
     registration/

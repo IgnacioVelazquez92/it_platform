@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 from django.contrib import admin
+from django.contrib import messages
+from django.shortcuts import redirect, render
+from django.urls import path, reverse
 from django.db.models import Prefetch
 
+from apps.catalog.forms.template_import import TemplateExcelImportForm
 from apps.catalog.models import AccessTemplate, AccessTemplateItem
+from apps.catalog.services.template_excel_import import (
+    TemplateExcelImportError,
+    import_templates_from_excel,
+)
 
 
 @admin.register(AccessTemplateItem)
@@ -139,6 +147,53 @@ class AccessTemplateAdmin(admin.ModelAdmin):
 
     inlines = (AccessTemplateItemInline,)
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "import-excel/",
+                self.admin_site.admin_view(self.import_excel_view),
+                name="catalog_accesstemplate_import_excel",
+            ),
+        ]
+        return custom_urls + urls
+
+    def import_excel_view(self, request):
+        if not self.has_add_permission(request):
+            return redirect(reverse("admin:index"))
+
+        if request.method == "POST":
+            form = TemplateExcelImportForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
+                    result = import_templates_from_excel(
+                        file_obj=form.cleaned_data["excel_file"],
+                        owner=request.user,
+                        company=form.cleaned_data["company"],
+                        replace_existing=bool(form.cleaned_data["replace_existing"]),
+                    )
+                except TemplateExcelImportError as exc:
+                    form.add_error(None, str(exc))
+                else:
+                    for warning in result.warnings:
+                        self.message_user(request, warning, level=messages.WARNING)
+                    self.message_user(
+                        request,
+                        f"Importacion completada. Templates procesados: {len(result.results)}.",
+                        level=messages.SUCCESS,
+                    )
+                    return redirect(reverse("admin:catalog_accesstemplate_changelist"))
+        else:
+            form = TemplateExcelImportForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": "Importar templates desde Excel",
+            "form": form,
+        }
+        return render(request, "admin/catalog/accesstemplate/import_excel.html", context)
+
     def get_queryset(self, request):
         """
         Evita N+1 al mostrar resumen de empresas/sucursales e items_count.
@@ -202,3 +257,4 @@ class AccessTemplateAdmin(admin.ModelAdmin):
     @admin.display(description="Ítems")
     def items_count(self, obj: AccessTemplate) -> int:
         return obj.items.count()
+    change_list_template = "admin/catalog/accesstemplate/change_list.html"
