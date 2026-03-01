@@ -148,6 +148,50 @@ def _build_module_index() -> dict[tuple[str, str, str], ErpModuleSubLevel]:
     return index
 
 
+def _build_level_index() -> dict[tuple[str, str], ErpModuleLevel]:
+    levels = (
+        ErpModuleLevel.objects.filter(
+            is_active=True,
+            module__is_active=True,
+        )
+        .select_related("module")
+        .order_by("module__name", "name")
+    )
+    index: dict[tuple[str, str], ErpModuleLevel] = {}
+    duplicates: set[tuple[str, str]] = set()
+    for level in levels:
+        key = (
+            _normalize_text(level.module.name),
+            _normalize_text(level.name),
+        )
+        if key in index:
+            duplicates.add(key)
+            continue
+        index[key] = level
+    if duplicates:
+        raise TemplateExcelImportError(
+            "Hay niveles ERP duplicados luego de normalizar nombres. Revisar catalogo base."
+        )
+    return index
+
+
+def _build_root_module_index() -> dict[str, ErpModule]:
+    modules = ErpModule.objects.filter(is_active=True).order_by("name")
+    index: dict[str, ErpModule] = {}
+    duplicates: set[str] = set()
+    for module in modules:
+        key = _normalize_text(module.name)
+        if key in index:
+            duplicates.add(key)
+            continue
+        index[key] = module
+    if duplicates:
+        raise TemplateExcelImportError(
+            "Hay modulos ERP duplicados luego de normalizar nombres. Revisar catalogo base."
+        )
+    return index
+
+
 def _build_action_index() -> dict[tuple[str, str], ActionPermission]:
     actions = ActionPermission.objects.filter(is_active=True).order_by("group", "action")
     index: dict[tuple[str, str], ActionPermission] = {}
@@ -165,7 +209,9 @@ def _build_action_index() -> dict[tuple[str, str], ActionPermission]:
     return index
 
 
-def _parse_sheet(sheet, *, module_index, action_index) -> ParsedSheetTemplate:
+def _parse_sheet(sheet, *, module_index, level_index, root_module_index, action_index) -> ParsedSheetTemplate:
+    selected_modules: dict[int, ErpModule] = {}
+    selected_levels: dict[int, ErpModuleLevel] = {}
     selected_sublevels: dict[int, ErpModuleSubLevel] = {}
     action_items: list[dict] = []
     action_values_selected = 0
@@ -182,12 +228,32 @@ def _parse_sheet(sheet, *, module_index, action_index) -> ParsedSheetTemplate:
         if not _as_bool(applies_value, sheet_name=sheet.title, row_idx=row_idx, label="Corresponde"):
             continue
 
-        key = (
-            _normalize_text(module_name),
-            _normalize_text(level_name),
-            _normalize_text(sublevel_name),
-        )
-        sublevel = module_index.get(key)
+        module_key = _normalize_text(module_name)
+        level_key = _normalize_text(level_name)
+        sublevel_key = _normalize_text(sublevel_name)
+
+        module = root_module_index.get(module_key)
+        if not module:
+            raise TemplateExcelImportError(
+                f"Solapa '{sheet.title}', fila {row_idx}: no existe el modulo {module_name!r}."
+            )
+        selected_modules[module.id] = module
+
+        if not level_key:
+            continue
+
+        level = level_index.get((module_key, level_key))
+        if not level:
+            raise TemplateExcelImportError(
+                f"Solapa '{sheet.title}', fila {row_idx}: no existe el nivel "
+                f"{module_name!r} / {level_name!r}."
+            )
+        selected_levels[level.id] = level
+
+        if not sublevel_key:
+            continue
+
+        sublevel = module_index.get((module_key, level_key, sublevel_key))
         if not sublevel:
             raise TemplateExcelImportError(
                 f"Solapa '{sheet.title}', fila {row_idx}: no existe el subnivel "
@@ -237,18 +303,14 @@ def _parse_sheet(sheet, *, module_index, action_index) -> ParsedSheetTemplate:
 
         action_items.append(item)
 
-    sublevels = sorted(
-        selected_sublevels.values(),
-        key=lambda row: (row.level.module.name, row.level.name, row.name),
-    )
-    levels_map = {sub.level_id: sub.level for sub in sublevels}
-    modules_map = {sub.level.module_id: sub.level.module for sub in sublevels}
-
     return ParsedSheetTemplate(
         name=" ".join(sheet.title.strip().split()),
-        modules=sorted(modules_map.values(), key=lambda row: row.name),
-        levels=sorted(levels_map.values(), key=lambda row: (row.module.name, row.name)),
-        sublevels=sublevels,
+        modules=sorted(selected_modules.values(), key=lambda row: row.name),
+        levels=sorted(selected_levels.values(), key=lambda row: (row.module.name, row.name)),
+        sublevels=sorted(
+            selected_sublevels.values(),
+            key=lambda row: (row.level.module.name, row.level.name, row.name),
+        ),
         action_items=action_items,
         action_values_selected=action_values_selected,
     )
@@ -293,6 +355,8 @@ def import_templates_from_excel(
     base_company = _resolve_company(company=company)
     workbook = load_workbook(filename=BytesIO(_read_file_bytes(file_obj)), data_only=True)
     module_index = _build_module_index()
+    level_index = _build_level_index()
+    root_module_index = _build_root_module_index()
     action_index = _build_action_index()
 
     parsed_sheets: list[ParsedSheetTemplate] = []
@@ -303,7 +367,13 @@ def import_templates_from_excel(
         if not template_name:
             warnings.append("Se encontro una solapa sin nombre y fue omitida.")
             continue
-        parsed = _parse_sheet(sheet, module_index=module_index, action_index=action_index)
+        parsed = _parse_sheet(
+            sheet,
+            module_index=module_index,
+            level_index=level_index,
+            root_module_index=root_module_index,
+            action_index=action_index,
+        )
         parsed_sheets.append(parsed)
 
     results: list[SheetImportResult] = []
