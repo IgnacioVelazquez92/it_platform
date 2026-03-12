@@ -8,7 +8,7 @@
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
       <h3 class="mb-1">Nuevo ABM</h3>
-      <div class="text-muted">Elegí cómo querés iniciar la solicitud.</div>
+      <div class="text-muted">Elige como quieres iniciar la solicitud.</div>
     </div>
   </div>
 
@@ -33,7 +33,7 @@
                 <div class="fw-semibold">{{ radio.choice_label }}</div>
                 {% if radio.data.value == "TEMPLATE" %}
                   <div class="text-muted small">
-                    Recomendado si ya existe un perfil similar. Luego podés ajustar en los pasos.
+                    Recomendado si ya existe uno o varios perfiles similares. Luego puedes ajustarlos en los pasos.
                   </div>
                 {% else %}
                   <div class="text-muted small">
@@ -52,15 +52,31 @@
 
       <div id="templateBox" class="mt-3">
         <div class="p-3 bg-body-tertiary rounded">
-          <label class="form-label fw-semibold">{{ form.template.label }}</label>
-          {{ form.template }}
+          <label class="form-label fw-semibold">{{ form.templates.label }}</label>
 
-          {% if form.template.errors %}
-            <div class="invalid-feedback d-block mt-2">{{ form.template.errors|striptags }}</div>
+          <div class="border rounded bg-white p-3">
+            <div class="small text-muted mb-2">
+              Puedes marcar uno o varios templates. El sistema los fusiona por union positiva.
+            </div>
+
+            <div class="d-grid gap-2">
+              {% for checkbox in form.templates %}
+                <label class="border rounded p-3 d-flex gap-2 align-items-start">
+                  <div class="pt-1">{{ checkbox.tag }}</div>
+                  <div class="small">{{ checkbox.choice_label }}</div>
+                </label>
+              {% empty %}
+                <div class="text-muted small">No hay templates activos disponibles.</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {% if form.templates.errors %}
+            <div class="invalid-feedback d-block mt-2">{{ form.templates.errors|striptags }}</div>
           {% endif %}
 
           <div class="text-muted small mt-2">
-            Consejo: usá templates para roles repetitivos (ej: Analista de Compras) y ganás velocidad sin perder control.
+            Si eliges varios, se conserva todo lo ya otorgado y se suma lo faltante del resto.
           </div>
         </div>
       </div>

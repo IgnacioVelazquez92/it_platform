@@ -16,7 +16,12 @@ class WizardStep0StartView(WizardBaseView):
 
     def get(self, request):
         wizard = self.get_wizard(request)
-        form = StartRequestForm(initial=wizard)
+        initial = dict(wizard)
+        if wizard.get("template_ids"):
+            initial["templates"] = wizard["template_ids"]
+        elif wizard.get("template_id"):
+            initial["templates"] = [wizard["template_id"]]
+        form = StartRequestForm(initial=initial)
 
         return render(
             request,
@@ -43,9 +48,10 @@ class WizardStep0StartView(WizardBaseView):
         wizard.update(
             {
                 "start_mode": form.cleaned_data["start_mode"],
+                "template_ids": [tpl.pk for tpl in form.cleaned_data.get("templates", [])],
                 "template_id": (
-                    form.cleaned_data["template"].pk
-                    if form.cleaned_data.get("template")
+                    form.cleaned_data["templates"][0].pk
+                    if form.cleaned_data.get("templates")
                     else None
                 ),
                 "request_id": None,

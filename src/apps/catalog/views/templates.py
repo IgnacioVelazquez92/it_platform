@@ -7,12 +7,13 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.http import HttpResponseRedirect
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
-from django.views.generic import DetailView, ListView, UpdateView, DeleteView
+from django.views import View
+from django.views.generic import DetailView, ListView, DeleteView
 
-from apps.catalog.forms.template_meta import AccessTemplateMetaForm
 from apps.catalog.models.templates import AccessTemplate
 from apps.catalog.models.selections import (
     SelectionSetActionValue,
@@ -21,6 +22,7 @@ from apps.catalog.models.selections import (
     SelectionSetLevel,
     SelectionSetSubLevel,
 )
+from apps.catalog.views.template_wizard.base import TEMPLATE_WIZARD_SESSION_KEY
 
 
 def _can_manage_templates(user) -> bool:
@@ -223,21 +225,30 @@ class TemplateDetailView(LoginRequiredMixin, DetailView):
 # Editar metadata
 # ──────────────────────────────────────────────
 
-class TemplateEditView(LoginRequiredMixin, UpdateView):
-    model = AccessTemplate
-    form_class = AccessTemplateMetaForm
-    template_name = "catalog/template/edit.html"
-    context_object_name = "template_obj"
-
-    def get_object(self, queryset=None):
-        obj = super().get_object(queryset)
+class TemplateEditView(LoginRequiredMixin, View):
+    def get_template(self, pk: int) -> AccessTemplate:
+        obj = get_object_or_404(AccessTemplate, pk=pk)
         if not _can_manage_templates(self.request.user):
             raise PermissionDenied
         return obj
 
-    def get_success_url(self):
-        messages.success(self.request, "Template actualizado.")
-        return reverse("catalog:template_detail", args=[self.object.pk])
+    def dispatch(self, request, *args, **kwargs):
+        self.template_obj = self.get_template(kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def _begin_edit_wizard(self) -> HttpResponseRedirect:
+        self.request.session[TEMPLATE_WIZARD_SESSION_KEY] = {
+            "template_id": self.template_obj.pk,
+            "is_editing": True,
+        }
+        self.request.session.modified = True
+        return redirect(reverse("catalog:template_wizard_start"))
+
+    def get(self, request, *args, **kwargs):
+        return self._begin_edit_wizard()
+
+    def post(self, request, *args, **kwargs):
+        return self._begin_edit_wizard()
 
 
 # ──────────────────────────────────────────────

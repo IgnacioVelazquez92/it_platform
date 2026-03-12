@@ -1,6 +1,6 @@
 git pull origin main# AGENTS.md — Contexto del proyecto IT Platform
 
-> Fecha de última actualización: 26 de febrero de 2026 (revisión 3).
+> Fecha de última actualización: 11 de marzo de 2026 (revisión 4).
 > Este archivo describe el estado **actual** del proyecto y sirve de referencia para agentes de IA y nuevos colaboradores.
 > Regla de ORO: luego de terminar de hacer cualquier cambio venir actualizar el contexto, el contexto es los archivos con sus respectivas funciones  y clases y parametros de entrada y salida para nunca fllar en los imports, una breve descripción de que hace cada función y nada más.
 
@@ -98,7 +98,7 @@ Estado almacenado en **sesión** bajo clave `catalog_wizard`. Se guarda en DB al
 
 | Paso | URL | Vista | Qué hace |
 |---|---|---|---|
-| 0 | `wizard/start/` | `WizardStep0StartView` | Elige modo BLANK o TEMPLATE. Si TEMPLATE: selecciona un `AccessTemplate`. |
+| 0 | `wizard/start/` | `WizardStep0StartView` | Elige modo BLANK o TEMPLATE. Si TEMPLATE: selecciona uno o varios `AccessTemplate`; guarda `template_ids` en sesión y deja `template_id` con el primero solo por compatibilidad legacy. |
 | 1 | `wizard/person/` | `WizardStep1PersonView` | Rellena `RequestPersonData`. Crea `AccessRequest` (DRAFT) y guarda `request_id` en sesión. |
 | 2 | `wizard/companies/` | `WizardStep2CompaniesView` | Multi-selección de `Company` + flag `same_modules_for_all`. Crea `PermissionSelectionSet` + `AccessRequestItem` por empresa. Clona datos de template si aplica. |
 | 3 | `wizard/modules/` | `WizardStep3ModulesView` | Árbol de módulos. Si `same_modules_for_all`, un form compartido; si no, un form por item. Escribe `SelectionSetModule/Level/SubLevel`. |
@@ -116,10 +116,10 @@ Wizard separado con clave de sesión `catalog_template_wizard`. No tiene Step de
 
 | Paso | URL | Vista | Qué hace |
 |---|---|---|---|
-| 0 | `templates/new/start/` | `TemplateWizardStep0StartView` | Ingresa nombre/departamento/rol/notas. Crea `AccessTemplate(is_active=False)` draft en DB y guarda `template_id` en sesión. |
+| 0 | `templates/new/start/` | `TemplateWizardStep0StartView` | Ingresa nombre/departamento/rol/notas. Crea `AccessTemplate(is_active=False)` draft en DB y guarda `template_id` en sesión. Si la sesión viene desde `catalog:template_edit`, reutiliza el template existente en modo edición. |
 | 1 | `templates/new/modules/` | `TemplateWizardStep2ModulesView` | Árbol de módulos (siempre GLOBAL para el perfil base). Reutiliza `Step3ModulesForm` y `build_module_tree`. |
 | 2 | `templates/new/globals/` | `TemplateWizardStep3GlobalsView` | Formsets de acciones, matriz CRUD, medios de pago (siempre GLOBAL para el perfil base). Reutiliza `ActionValueFormSet`, `MatrixFormSet`, `PaymentFormSet`. |
-| 3 | `templates/new/review/` | `TemplateWizardStep5ReviewView` | Vista de revisión del perfil base (sin tabs por empresa). Al confirmar: `tmpl.is_active = True`, limpia sesión, redirige a `template_detail`. |
+| 3 | `templates/new/review/` | `TemplateWizardStep5ReviewView` | Vista de revisión del perfil base (sin tabs por empresa). Al confirmar: `tmpl.is_active = True`, limpia sesión, redirige a `template_detail`; muestra mensaje de creación o actualización según `is_editing`. |
 
 > ⚠️ **El wizard de templates no tiene pasos de empresa/sucursal ni scoped.** Los templates solo capturan datos independientes de empresa/sucursal: módulos, permisos globales, matriz CRUD y medios de pago.
 
@@ -130,6 +130,7 @@ Wizard separado con clave de sesión `catalog_template_wizard`. No tiene Step de
 **Archivos clave:**
 - Vistas: `views/template_wizard/` — `base.py`, `step_0_start.py` … `step_5_review.py`
 - Base class: `TemplateWizardBaseView` en `base.py` — session key `TEMPLATE_WIZARD_SESSION_KEY = "catalog_template_wizard"`, método `wizard_context(**extra)` y helper `ensure_single_base_item(tmpl) -> tuple[AccessTemplateItem | None, str | None]`
+- `TemplateWizardBaseView` también expone `is_edit_mode(request) -> bool` y `get_template_obj(request) -> AccessTemplate | None`; `get_template_obj` resuelve por `template_id` de sesión sin restringir por owner porque el control real es staff/superuser en `dispatch`.
 - HTML: `templates/catalog/template_wizard/` — `_progress.html`, `step_0_start.html` … `step_5_review.html`
 - Form paso 0: `forms/template_start.py` — `TemplateStartForm`
 
@@ -170,6 +171,7 @@ catalog:template_wizard_review    → templates/new/review/
 | `create_template_from_request(ar, name, …)` | `services/template_from_request.py` | Crea un `AccessTemplate` desde un request SUBMITTED/APPROVED. |
 | `create_template_directly(name, department, role_name, items_data, owner)` | `services/templates.py` | Crea un `AccessTemplate` directamente (sin request previo), a partir de datos del wizard de templates. |
 | `import_templates_from_excel(file_obj, owner, company=None, replace_existing=False)` | `services/template_excel_import.py` | Importa templates desde un `.xlsx`; cada solapa se mapea a un `AccessTemplate`, resuelve módulos/subniveles y `ActionPermission`, recrea el item base y sincroniza el `selection_set` legacy para compatibilidad. |
+| `merge_selection_sets(bases, company, branch=None)` | `forms/helpers.py` | Fusiona varios `PermissionSelectionSet` por unión positiva hacia un nuevo scope. Une módulos/subniveles/scoped/matriz/medios de pago; en acciones usa OR para BOOL, máximo para numéricos y primer texto no vacío para TEXT. |
 
 ---
 
@@ -180,8 +182,10 @@ catalog:template_wizard_review    → templates/new/review/
 - **Templates HTML**: `{% extends "base/base.html" %}` + `{% block content %}`. Sidebar en `base/_sidebar.html`.
 - **Namespace**: siempre `catalog:` en `{% url %}` y `reverse()`.
 - **Sesión wizard**: clave `catalog_wizard` para requests, `catalog_template_wizard` para templates.
+- **Templates múltiples en requests**: `catalog_wizard` puede guardar `template_ids: list[int]`; `template_id` se mantiene solo para compatibilidad con código legacy.
 - **Sin FKs legacy**: en lógica nueva, siempre usar `items` (AccessRequestItem / AccessTemplateItem), nunca el FK directo `selection_set` en `AccessRequest`/`AccessTemplate`.
 - **Permisos CRUD de templates**: editar y eliminar un `AccessTemplate` está restringido a usuarios **staff** (`is_staff=True`). Los usuarios no-staff tienen acceso de solo lectura (lista + detalle).
+- **Edición de templates**: `catalog:template_edit` ya no guarda solo metadata; ahora inicializa la sesión `catalog_template_wizard` con `template_id` + `is_editing=True` y redirige al paso 0 del wizard para continuar con módulos y permisos.
 
 ---
 
@@ -197,12 +201,13 @@ catalog:template_wizard_review    → templates/new/review/
 - Envío de solicitud + notificación por email
 - Creación de `AccessTemplate` desde request enviado ("Make Template")
 - Wizard pre-cargado desde template (Steps 0 → clona selection_sets)
+- Wizard pre-cargado desde uno o varios templates con merge positivo
 - Lista de solicitudes (paginada, con búsqueda, scope por usuario/superuser)
 - Detalle de solicitud con árbol de módulos y permisos
 - Admin Django completo para todos los modelos
 - Bootstrap 5 + `BootstrapFormMixin`
 - Importación de catálogos desde Excel (management commands)
-- **CRUD completo de `AccessTemplate`**: lista (paginada, filtros), detalle (árbol completo), edit metadata, delete con cascada
+- **CRUD completo de `AccessTemplate`**: lista (paginada, filtros), detalle (árbol completo), edición completa por wizard (metadata + módulos + permisos globales), delete con cascada
 - **Wizard de creación directa de templates** (6 pasos) — completamente funcional
 - **Wizard de creación directa de templates** (4 pasos: start/modules/globals/review) — completamente funcional y sin selección de empresa/sucursal en UI
 - **Importación masiva de templates desde Excel**: disponible en Django admin de `AccessTemplate` y con management command `import_access_templates_excel`; procesa una solapa por template y puede reemplazar existentes.
@@ -228,7 +233,7 @@ src/
     catalog/
       admin/          # Admin por entidad (global_ops, modules, person, requests, rules, scoped, selections, templates)
                       # templates_admin.py agrega URL admin `import-excel/` para carga masiva de templates
-      forms/          # bootstrap_mixins, helpers, helpers_globals, person, start, template_meta, template_start, step_2..5, visibility
+      forms/          # bootstrap_mixins, helpers(clone_selection_set, merge_selection_sets), helpers_globals, person, start(multiselect templates), template_meta, template_start, step_2..5, visibility
                       # template_import.py -> TemplateExcelImportForm(excel_file, replace_existing)
       management/commands/  # bootstrap_catalog, import_access_templates_excel
       migrations/
@@ -244,9 +249,9 @@ src/
       templatetags/   # catalog_extras
       views/
         request_list.py, request_templates.py, requests.py, templates.py
-        templates.py  # TemplateListView, TemplateDetailView, TemplateEditView, TemplateDeleteView
-        wizard/       # step_0_start.py … step_6_review.py
-        template_wizard/  # base.py, step_0_start.py … step_5_review.py
+        templates.py  # TemplateListView, TemplateDetailView, TemplateEditView(init wizard de edición), TemplateDeleteView
+        wizard/       # step_0_start.py(multiselect templates), step_2_companies.py(resolve/merge template_ids), step_3..6
+        template_wizard/  # base.py(is_edit_mode, get_template_obj, ensure_single_base_item), step_0_start.py(prefill/create-update metadata), step_2_modules.py, step_3_globals.py, step_5_review.py(mensaje final create/update)
     core/
   config/settings/    # base, development, production
   templates/

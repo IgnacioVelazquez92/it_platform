@@ -8,7 +8,7 @@ from django.db import transaction
 from django.shortcuts import render
 
 from apps.catalog.forms.step_2_companies import Step2CompaniesForm
-from apps.catalog.forms.helpers import clone_selection_set
+from apps.catalog.forms.helpers import clone_selection_set, merge_selection_sets
 from apps.catalog.models.permissions.scoped import Company, Branch
 from apps.catalog.models.requests import AccessRequest, AccessRequestItem
 from apps.catalog.models.selections import PermissionSelectionSet
@@ -30,13 +30,6 @@ class WizardStep2CompaniesView(WizardBaseView):
         return AccessRequest.objects.select_related("person_data").get(pk=req_id)
 
     def _context_lists(self, *, form, req):
-        """
-        Prepara estructuras para un template estable:
-        - companies_qs: empresas activas
-        - company_blocks: lista [{company, branches}] para referencia (no para selección)
-
-        Nota: Las sucursales se eligen en Step 5 (scoped), no aquí.
-        """
         companies_qs = Company.objects.filter(is_active=True).order_by("name")
         branches_qs = (
             Branch.objects.filter(is_active=True)
@@ -45,11 +38,13 @@ class WizardStep2CompaniesView(WizardBaseView):
         )
 
         branches_by_company: dict[int, list[Branch]] = defaultdict(list)
-        for b in branches_qs:
-            branches_by_company[b.company_id].append(b)
+        for branch in branches_qs:
+            branches_by_company[branch.company_id].append(branch)
 
-        company_blocks = [{"company": c, "branches": branches_by_company.get(
-            c.id, [])} for c in companies_qs]
+        company_blocks = [
+            {"company": company, "branches": branches_by_company.get(company.id, [])}
+            for company in companies_qs
+        ]
 
         return self.wizard_context(
             form=form,
@@ -57,6 +52,34 @@ class WizardStep2CompaniesView(WizardBaseView):
             companies_qs=companies_qs,
             company_blocks=company_blocks,
         )
+
+    def _get_template_base_selections(self, wizard: dict) -> list[PermissionSelectionSet]:
+        template_ids = wizard.get("template_ids") or []
+        if not template_ids and wizard.get("template_id"):
+            template_ids = [wizard["template_id"]]
+        if not template_ids:
+            return []
+
+        templates = list(
+            AccessTemplate.objects.select_related("selection_set")
+            .prefetch_related("items__selection_set")
+            .filter(pk__in=template_ids, is_active=True)
+        )
+        templates_by_id = {tpl.id: tpl for tpl in templates}
+
+        selections: list[PermissionSelectionSet] = []
+        for template_id in template_ids:
+            tpl = templates_by_id.get(template_id)
+            if tpl is None:
+                continue
+            base_selection = tpl.selection_set
+            if base_selection is None:
+                first_item = tpl.items.order_by("order", "id").first()
+                if first_item:
+                    base_selection = first_item.selection_set
+            if base_selection is not None:
+                selections.append(base_selection)
+        return selections
 
     def get(self, request):
         try:
@@ -66,18 +89,16 @@ class WizardStep2CompaniesView(WizardBaseView):
 
         wizard = self.get_wizard(request)
 
-        # Prefill desde wizard (si existe) o desde items existentes
         initial: dict = {}
         if wizard.get("company_ids"):
             initial["companies"] = wizard["company_ids"]
         if wizard.get("same_modules_for_all") is not None:
             initial["same_modules_for_all"] = "1" if wizard["same_modules_for_all"] else "0"
 
-        # Si no hay wizard pero ya hay items, prefill desde DB
         if not initial.get("companies") and req.items.exists():
             company_ids = []
-            for it in req.items.select_related("selection_set__company"):
-                company_ids.append(it.selection_set.company_id)
+            for item in req.items.select_related("selection_set__company"):
+                company_ids.append(item.selection_set.company_id)
 
             initial["companies"] = sorted(set(company_ids))
             initial["same_modules_for_all"] = "1" if req.same_modules_for_all else "0"
@@ -111,65 +132,50 @@ class WizardStep2CompaniesView(WizardBaseView):
         branches = list(form.cleaned_data.get("branches") or [])
         same_modules_for_all = form.cleaned_data["same_modules_for_all"] == "1"
 
-        # Guardar flag en request (gobierna UX de pasos siguientes)
         req.same_modules_for_all = same_modules_for_all
         req.save(update_fields=["same_modules_for_all", "updated_at"])
 
-        # Reconstrucción segura de items (si el usuario vuelve a Step 2 y cambia scope)
-        old_selection_set_ids = list(
-            req.items.values_list("selection_set_id", flat=True))
+        old_selection_set_ids = list(req.items.values_list("selection_set_id", flat=True))
         req.items.all().delete()
 
-        # Borrar selection_sets huérfanos creados por el wizard
-        # (solo si no están usados por request_items ni templates)
-        if old_selection_set_ids:
-            for ss_id in old_selection_set_ids:
-                ss = PermissionSelectionSet.objects.filter(pk=ss_id).first()
-                if not ss:
-                    continue
-                if ss.request_items.exists():
-                    continue
-                if ss.templates_legacy.exists() or ss.template_items.exists():
-                    continue
-                ss.delete()
+        for selection_set_id in old_selection_set_ids:
+            selection_set = PermissionSelectionSet.objects.filter(pk=selection_set_id).first()
+            if not selection_set:
+                continue
+            if selection_set.request_items.exists():
+                continue
+            if selection_set.templates_legacy.exists() or selection_set.template_items.exists():
+                continue
+            selection_set.delete()
 
-        # Base template (si existe)
-        template_id = wizard.get("template_id")
-        base_selection = None
-        if template_id:
-            tpl = AccessTemplate.objects.select_related("selection_set").prefetch_related(
-                "items__selection_set"
-            ).filter(pk=template_id, is_active=True).first()
-            if tpl:
-                base_selection = tpl.selection_set
-                if base_selection is None:
-                    first_item = tpl.items.order_by("order", "id").first()
-                    if first_item:
-                        base_selection = first_item.selection_set
+        base_selections = self._get_template_base_selections(wizard)
 
         created_items = 0
-
-        # Crear items + selection sets: UNO POR EMPRESA (sin sucursal)
-        # Las sucursales se configuran en Step 5 (scoped), no aquí.
-        # El parámetro branches se ignora en la creación de items (solo se usa para UI feedback).
         for company in companies:
-            if base_selection:
-                ss = clone_selection_set(
-                    base_selection, company=company, branch=None)
+            if len(base_selections) > 1:
+                selection_set = merge_selection_sets(base_selections, company=company, branch=None)
+            elif len(base_selections) == 1:
+                selection_set = clone_selection_set(base_selections[0], company=company, branch=None)
             else:
-                ss = PermissionSelectionSet.objects.create(
-                    company=company, branch=None)
+                selection_set = PermissionSelectionSet.objects.create(company=company, branch=None)
 
             AccessRequestItem.objects.create(
-                request=req, selection_set=ss, order=created_items)
+                request=req,
+                selection_set=selection_set,
+                order=created_items,
+            )
             created_items += 1
 
-        # Persistir wizard state para próximos steps
-        wizard["company_ids"] = [c.id for c in companies]
-        wizard["branch_ids"] = [b.id for b in branches]
+        wizard["company_ids"] = [company.id for company in companies]
+        wizard["branch_ids"] = [branch.id for branch in branches]
         wizard["same_modules_for_all"] = same_modules_for_all
         self.set_wizard(request, wizard)
 
-        messages.success(
-            request, "Alcance guardado. Continuemos con módulos y permisos.")
+        if len(base_selections) > 1:
+            messages.success(
+                request,
+                f"Alcance guardado. Se fusionaron {len(base_selections)} templates base y seguimos con modulos y permisos.",
+            )
+        else:
+            messages.success(request, "Alcance guardado. Continuemos con modulos y permisos.")
         return self.redirect_to("catalog:wizard_step_3_modules")

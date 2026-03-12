@@ -5,8 +5,14 @@
   {% include "catalog/template_wizard/_progress.html" %}
 
   <div class="mb-3">
-    <h3 class="mb-1">Nuevo modelo de acceso</h3>
-    <div class="text-muted">Definí el nombre, departamento y rol del perfil.</div>
+    <h3 class="mb-1">{% if is_editing %}Editar modelo de acceso{% else %}Nuevo modelo de acceso{% endif %}</h3>
+    <div class="text-muted">
+      {% if is_editing %}
+        Actualiza los metadatos y continua con modulos y permisos del perfil.
+      {% else %}
+        Define el nombre, departamento y rol del perfil.
+      {% endif %}
+    </div>
   </div>
 
   {% include "base/_messages.html" %}
@@ -19,8 +25,8 @@
       {% endfor %}
     </div>
     <div class="card-footer d-flex justify-content-end gap-2">
-      <a class="btn btn-outline-secondary" href="{% url 'catalog:template_list' %}">Cancelar</a>
-      <button type="submit" class="btn btn-primary">Continuar →</button>
+      <a class="btn btn-outline-secondary" href="{% if template_obj %}{% url 'catalog:template_detail' template_obj.pk %}{% else %}{% url 'catalog:template_list' %}{% endif %}">Cancelar</a>
+      <button type="submit" class="btn btn-primary">{% if is_editing %}Guardar y continuar ->{% else %}Continuar ->{% endif %}</button>
     </div>
   </form>
 </div>

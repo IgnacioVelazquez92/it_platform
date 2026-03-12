@@ -13,32 +13,33 @@ class StartMode:
 
 class StartRequestForm(BootstrapFormMixin, forms.Form):
     start_mode = forms.ChoiceField(
-        label="¿Cómo querés empezar?",
+        label="Como queres empezar?",
         choices=[
-            (StartMode.TEMPLATE, "Usar un template"),
+            (StartMode.TEMPLATE, "Usar template"),
             (StartMode.BLANK, "Empezar desde cero"),
         ],
         widget=forms.RadioSelect,
         initial=StartMode.TEMPLATE,
     )
 
-    template = forms.ModelChoiceField(
-        label="Template",
-        queryset=AccessTemplate.objects.filter(
-            is_active=True).order_by("-created_at"),
+    templates = forms.ModelMultipleChoiceField(
+        label="Templates",
+        queryset=AccessTemplate.objects.filter(is_active=True).order_by("-created_at"),
         required=False,
-        empty_label="Seleccionar template…",
+        widget=forms.CheckboxSelectMultiple,
     )
 
     def clean(self):
         cleaned = super().clean()
         mode = cleaned.get("start_mode")
-        tpl = cleaned.get("template")
+        templates = cleaned.get("templates")
 
-        if mode == StartMode.TEMPLATE and not tpl:
+        if mode == StartMode.TEMPLATE and not templates:
             self.add_error(
-                "template", "Seleccioná un template o elegí 'Empezar desde cero'.")
+                "templates",
+                "Selecciona al menos un template o elige 'Empezar desde cero'.",
+            )
         if mode == StartMode.BLANK:
-            cleaned["template"] = None
+            cleaned["templates"] = AccessTemplate.objects.none()
 
         return cleaned

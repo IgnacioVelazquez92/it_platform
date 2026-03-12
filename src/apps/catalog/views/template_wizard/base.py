@@ -49,11 +49,14 @@ class TemplateWizardBaseView(LoginRequiredMixin, View):
     def get_template_id(self, request: HttpRequest) -> int | None:
         return self.get_wizard(request).get("template_id")
 
+    def is_edit_mode(self, request: HttpRequest) -> bool:
+        return bool(self.get_wizard(request).get("is_editing"))
+
     def get_template_obj(self, request: HttpRequest) -> AccessTemplate | None:
         tmpl_id = self.get_template_id(request)
         if not tmpl_id:
             return None
-        return get_object_or_404(AccessTemplate, pk=tmpl_id, owner=request.user)
+        return get_object_or_404(AccessTemplate, pk=tmpl_id)
 
     def ensure_single_base_item(self, tmpl: AccessTemplate) -> tuple[AccessTemplateItem | None, str | None]:
         """

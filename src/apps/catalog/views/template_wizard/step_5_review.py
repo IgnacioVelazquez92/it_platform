@@ -119,7 +119,10 @@ class TemplateWizardStep5ReviewView(TemplateWizardBaseView):
             return self.redirect_to("catalog:template_wizard_start")
 
         ctx = self._build_context(tmpl)
-        return render(request, self.template_name, self.wizard_context(**ctx))
+        return render(request, self.template_name, self.wizard_context(
+            **ctx,
+            is_editing=self.is_edit_mode(request),
+        ))
 
     @transaction.atomic
     def post(self, request):
@@ -128,10 +131,13 @@ class TemplateWizardStep5ReviewView(TemplateWizardBaseView):
         except AccessTemplate.DoesNotExist:
             return self.redirect_to("catalog:template_wizard_start")
 
-        # Activate the template
+        is_editing = self.is_edit_mode(request)
         tmpl.is_active = True
         tmpl.save(update_fields=["is_active", "updated_at"])
 
         self.clear_wizard(request)
-        messages.success(request, f'Modelo "{tmpl.name}" creado correctamente.')
+        if is_editing:
+            messages.success(request, f'Modelo "{tmpl.name}" actualizado correctamente.')
+        else:
+            messages.success(request, f'Modelo "{tmpl.name}" creado correctamente.')
         return redirect(reverse("catalog:template_detail", args=[tmpl.pk]))
