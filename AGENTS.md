@@ -98,9 +98,9 @@ Estado almacenado en **sesión** bajo clave `catalog_wizard`. Se guarda en DB al
 
 | Paso | URL | Vista | Qué hace |
 |---|---|---|---|
-| 0 | `wizard/start/` | `WizardStep0StartView` | Elige modo BLANK o TEMPLATE. Si TEMPLATE: selecciona uno o varios `AccessTemplate`; guarda `template_ids` en sesión y deja `template_id` con el primero solo por compatibilidad legacy. |
+| 0 | `wizard/start/` | `WizardStep0StartView` | Elige modo BLANK, TEMPLATE o MODEL_USER. Si TEMPLATE: selecciona uno o varios `AccessTemplate`; guarda `template_ids` en sesión y deja `template_id` con el primero solo por compatibilidad legacy. Si MODEL_USER: no usa templates y el dato de usuario modelo se carga como texto libre por empresa en el paso 2. |
 | 1 | `wizard/person/` | `WizardStep1PersonView` | Rellena `RequestPersonData`. Crea `AccessRequest` (DRAFT) y guarda `request_id` en sesión. |
-| 2 | `wizard/companies/` | `WizardStep2CompaniesView` | Multi-selección de `Company` + flag `same_modules_for_all`. Crea `PermissionSelectionSet` + `AccessRequestItem` por empresa. Clona datos de template si aplica. |
+| 2 | `wizard/companies/` | `WizardStep2CompaniesView` | Multi-selección de `Company` + flag `same_modules_for_all` + input de `usuario modelo` por empresa como **texto libre**. Crea `PermissionSelectionSet` + `AccessRequestItem` por empresa; guarda la referencia en `selection_set.notes` para uso operativo posterior en ERP. No hay lookup ni clonación automática por ese campo. UI condicional: el bloque `usuario modelo` solo se muestra en modo `MODEL_USER`; el bloque de replicación `same_modules_for_all` solo se muestra en modo `BLANK`. Si el modo de inicio es `MODEL_USER`, el campo pasa a ser obligatorio por empresa y el flujo salta directo al review (paso 6). |
 | 3 | `wizard/modules/` | `WizardStep3ModulesView` | Árbol de módulos. Si `same_modules_for_all`, un form compartido; si no, un form por item. Escribe `SelectionSetModule/Level/SubLevel`. |
 | 4 | `wizard/globals/` | `WizardStep4GlobalsView` | Formsets de `SelectionSetActionValue`, `SelectionSetMatrixPermission`, `SelectionSetPaymentMethod`. Tabs por `ActionPermission.group`. |
 | 5 | `wizard/scoped/` | `WizardStep5ScopedView` | Por empresa: paneles + vendedores. Por sucursal: depósitos + cajas. Usa `NoValidationMultipleChoiceField`. |
@@ -202,7 +202,11 @@ catalog:template_wizard_review    → templates/new/review/
 - Creación de `AccessTemplate` desde request enviado ("Make Template")
 - Wizard pre-cargado desde template (Steps 0 → clona selection_sets)
 - Wizard pre-cargado desde uno o varios templates con merge positivo
+- Wizard Step 2 con referencia opcional de usuario modelo por empresa (texto libre, sin lookup)
+- Modo `MODEL_USER`: Step 2 exige referencia de usuario modelo en todas las empresas seleccionadas y evita pasos 3/4/5 (va directo a review)
 - Lista de solicitudes (paginada, con búsqueda, scope por usuario/superuser)
+- Lista de solicitudes muestra columna "Copia ERP" con resumen por empresa cuando la solicitud llega por copia
+- Detalle de solicitud aplica condicional: si la solicitud es por copia muestra solo el resumen "Copiar permisos de" por empresa; en solicitudes normales muestra el detalle completo de módulos/permisos.
 - Detalle de solicitud con árbol de módulos y permisos
 - Admin Django completo para todos los modelos
 - Bootstrap 5 + `BootstrapFormMixin`

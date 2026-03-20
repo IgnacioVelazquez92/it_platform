@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import render
 
+from apps.catalog.forms.start import StartMode
 from apps.catalog.forms.step_2_companies import Step2CompaniesForm
 from apps.catalog.forms.helpers import clone_selection_set, merge_selection_sets
 from apps.catalog.models.permissions.scoped import Company, Branch
@@ -30,6 +31,12 @@ class WizardStep2CompaniesView(WizardBaseView):
         return AccessRequest.objects.select_related("person_data").get(pk=req_id)
 
     def _context_lists(self, *, form, req):
+        wizard = self.get_wizard(self.request)
+        selected_company_ids = set(wizard.get("company_ids") or [])
+        selected_branch_ids = set(wizard.get("branch_ids") or [])
+        clone_model_by_company = wizard.get("clone_model_by_company") or {}
+        start_mode = wizard.get("start_mode")
+
         companies_qs = Company.objects.filter(is_active=True).order_by("name")
         branches_qs = (
             Branch.objects.filter(is_active=True)
@@ -51,6 +58,12 @@ class WizardStep2CompaniesView(WizardBaseView):
             request_obj=req,
             companies_qs=companies_qs,
             company_blocks=company_blocks,
+            selected_company_ids=selected_company_ids,
+            selected_branch_ids=[str(branch_id) for branch_id in selected_branch_ids],
+            clone_model_by_company=clone_model_by_company,
+            start_mode=start_mode,
+            is_blank_mode=(start_mode == StartMode.BLANK),
+            is_model_user_mode=(start_mode == StartMode.MODEL_USER),
         )
 
     def _get_template_base_selections(self, wizard: dict) -> list[PermissionSelectionSet]:
@@ -131,6 +144,31 @@ class WizardStep2CompaniesView(WizardBaseView):
         companies = list(form.cleaned_data["companies"])
         branches = list(form.cleaned_data.get("branches") or [])
         same_modules_for_all = form.cleaned_data["same_modules_for_all"] == "1"
+        start_mode = wizard.get("start_mode")
+        is_model_user_mode = start_mode == StartMode.MODEL_USER
+
+        clone_model_by_company: dict[str, str] = {}
+        missing_model_user_companies: list[str] = []
+
+        for company in companies:
+            model_user_ref = (request.POST.get(f"clone_user_{company.id}") or "").strip()
+            if not model_user_ref:
+                if is_model_user_mode:
+                    missing_model_user_companies.append(company.name)
+                continue
+            clone_model_by_company[str(company.id)] = model_user_ref
+
+        if missing_model_user_companies:
+            form.add_error(
+                None,
+                "En modo 'usuario modelo', debes completar el usuario modelo en todas las empresas seleccionadas: "
+                + ", ".join(missing_model_user_companies),
+            )
+            return render(
+                request,
+                self.template_name,
+                self._context_lists(form=form, req=req),
+            )
 
         req.same_modules_for_all = same_modules_for_all
         req.save(update_fields=["same_modules_for_all", "updated_at"])
@@ -159,6 +197,11 @@ class WizardStep2CompaniesView(WizardBaseView):
             else:
                 selection_set = PermissionSelectionSet.objects.create(company=company, branch=None)
 
+            model_user_ref = clone_model_by_company.get(str(company.id), "").strip()
+            if model_user_ref:
+                selection_set.notes = f"Usuario modelo ERP (texto libre): {model_user_ref}"
+                selection_set.save(update_fields=["notes"])
+
             AccessRequestItem.objects.create(
                 request=req,
                 selection_set=selection_set,
@@ -169,7 +212,21 @@ class WizardStep2CompaniesView(WizardBaseView):
         wizard["company_ids"] = [company.id for company in companies]
         wizard["branch_ids"] = [branch.id for branch in branches]
         wizard["same_modules_for_all"] = same_modules_for_all
+        wizard["clone_model_by_company"] = clone_model_by_company
         self.set_wizard(request, wizard)
+
+        if clone_model_by_company:
+            messages.success(
+                request,
+                f"Se guardo referencia de usuario modelo (texto libre) en {len(clone_model_by_company)} empresa(s).",
+            )
+
+        if is_model_user_mode:
+            messages.success(
+                request,
+                "Alcance guardado. Como iniciaste por usuario modelo, pasamos directo a revision para enviar.",
+            )
+            return self.redirect_to("catalog:wizard_step_6_review")
 
         if len(base_selections) > 1:
             messages.success(

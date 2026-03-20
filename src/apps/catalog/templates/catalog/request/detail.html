@@ -57,7 +57,33 @@
         <!-- Accesos -->
         <div class="tab-pane fade" id="tab-accesos" role="tabpanel">
 
-          {% if companies %}
+          {% if is_copy_request %}
+            <div class="alert alert-info mb-3">
+              <strong>Solicitud por copia:</strong> este pedido se gestiona tomando como referencia el usuario modelo indicado por empresa.
+            </div>
+
+            <div class="fw-semibold mb-2">Resumen de copia ERP</div>
+            <div class="table-responsive border rounded">
+              <table class="table table-sm mb-0 align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 35%;">Empresa</th>
+                    <th>Copiar permisos de</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in copy_rows %}
+                    <tr>
+                      <td class="fw-semibold">{{ row.company.name }}</td>
+                      <td>{{ row.model_user_reference }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          {% elif companies %}
+
             <div class="d-flex align-items-center justify-content-between mb-2">
               <div>
                 <div class="fw-semibold">Empresas</div>

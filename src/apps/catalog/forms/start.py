@@ -9,6 +9,7 @@ from apps.catalog.models.templates import AccessTemplate
 class StartMode:
     TEMPLATE = "TEMPLATE"
     BLANK = "BLANK"
+    MODEL_USER = "MODEL_USER"
 
 
 class StartRequestForm(BootstrapFormMixin, forms.Form):
@@ -17,6 +18,7 @@ class StartRequestForm(BootstrapFormMixin, forms.Form):
         choices=[
             (StartMode.TEMPLATE, "Usar template"),
             (StartMode.BLANK, "Empezar desde cero"),
+            (StartMode.MODEL_USER, "Completar con usuario modelo (ERP)"),
         ],
         widget=forms.RadioSelect,
         initial=StartMode.TEMPLATE,
@@ -39,7 +41,7 @@ class StartRequestForm(BootstrapFormMixin, forms.Form):
                 "templates",
                 "Selecciona al menos un template o elige 'Empezar desde cero'.",
             )
-        if mode == StartMode.BLANK:
+        if mode in (StartMode.BLANK, StartMode.MODEL_USER):
             cleaned["templates"] = AccessTemplate.objects.none()
 
         return cleaned

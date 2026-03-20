@@ -22,6 +22,7 @@ from apps.catalog.models.selections import (
     SelectionSetLevel,
     SelectionSetSubLevel,
 )
+from apps.catalog.forms.start import StartMode
 
 from .base import WizardBaseView
 
@@ -150,6 +151,16 @@ class WizardStep6ReviewView(WizardBaseView):
             )
             .get(pk=req_id)
         )
+
+    @staticmethod
+    def _extract_model_user_reference(raw_note: str) -> str:
+        prefix = "Usuario modelo ERP (texto libre):"
+        note = (raw_note or "").strip()
+        if not note:
+            return ""
+        if note.startswith(prefix):
+            return note[len(prefix):].strip()
+        return note
 
     # -----------------------------
     # Tree: Módulo -> Nivel -> Subnivel
@@ -412,6 +423,10 @@ class WizardStep6ReviewView(WizardBaseView):
             bucket["items"].append(it)
 
         companies: list[dict] = []
+        copy_rows: list[dict] = []
+
+        wizard = self.get_wizard(request)
+        is_model_user_mode = wizard.get("start_mode") == StartMode.MODEL_USER
 
         for company_id, bucket in companies_map.items():
             its = bucket["items"]
@@ -450,8 +465,16 @@ class WizardStep6ReviewView(WizardBaseView):
                     "company": bucket["company"],
                     "globals": self._build_global_payload(base_ss),
                     "branches": branches,
+                    "model_user_reference": self._extract_model_user_reference(base_ss.notes),
                 }
             )
+
+            model_ref = self._extract_model_user_reference(base_ss.notes)
+            if model_ref:
+                copy_rows.append({
+                    "company": bucket["company"],
+                    "model_user_reference": model_ref,
+                })
 
         return render(
             request,
@@ -460,6 +483,8 @@ class WizardStep6ReviewView(WizardBaseView):
                 request_obj=req,
                 companies=companies,
                 items=items,
+                copy_rows=copy_rows,
+                is_model_user_mode=is_model_user_mode,
             ),
         )
 

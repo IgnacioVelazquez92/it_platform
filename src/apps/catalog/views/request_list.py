@@ -7,6 +7,18 @@ from django.views.generic import ListView
 from apps.catalog.models.requests import AccessRequest, RequestStatus
 
 
+MODEL_USER_NOTE_PREFIX = "Usuario modelo ERP (texto libre):"
+
+
+def extract_model_user_reference(raw_note: str) -> str:
+    note = (raw_note or "").strip()
+    if not note:
+        return ""
+    if note.startswith(MODEL_USER_NOTE_PREFIX):
+        return note[len(MODEL_USER_NOTE_PREFIX):].strip()
+    return note
+
+
 class RequestListView(LoginRequiredMixin, ListView):
     model = AccessRequest
     template_name = "catalog/request/list.html"
@@ -17,6 +29,7 @@ class RequestListView(LoginRequiredMixin, ListView):
         qs = (
             AccessRequest.objects
             .select_related("person_data")
+            .prefetch_related("items__selection_set__company")
             .order_by("-created_at")
         )
 
@@ -54,4 +67,20 @@ class RequestListView(LoginRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["q"] = (self.request.GET.get("q") or "").strip()
         ctx["status"] = (self.request.GET.get("status") or "").strip()
+
+        for req in ctx["requests"]:
+            copy_summary: list[str] = []
+            seen: set[str] = set()
+            for item in req.items.all():
+                model_ref = extract_model_user_reference(item.selection_set.notes)
+                if not model_ref:
+                    continue
+                label = f"{item.selection_set.company.name}: {model_ref}"
+                if label in seen:
+                    continue
+                seen.add(label)
+                copy_summary.append(label)
+            req.copy_summary = copy_summary
+            req.is_copy_request = bool(copy_summary)
+
         return ctx

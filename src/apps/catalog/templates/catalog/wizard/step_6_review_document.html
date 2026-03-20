@@ -55,7 +55,11 @@
 <body>
   <div class="container py-4 doc-wrap">
     <div class="d-flex align-items-center justify-content-between mb-3 no-print">
-      <a href="{% url 'catalog:wizard_step_5_scoped' %}" class="btn btn-outline-secondary btn-sm">Atrás</a>
+      {% if is_model_user_mode %}
+        <a href="{% url 'catalog:wizard_step_2_companies' %}" class="btn btn-outline-secondary btn-sm">Atrás</a>
+      {% else %}
+        <a href="{% url 'catalog:wizard_step_5_scoped' %}" class="btn btn-outline-secondary btn-sm">Atrás</a>
+      {% endif %}
       <div class="d-flex gap-2">
         <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()">Imprimir</button>
         <form method="post" class="m-0">
@@ -122,6 +126,34 @@
 
       <div class="doc-hr"></div>
 
+      {% if copy_rows %}
+        <div class="mb-2">
+          <div class="section-title">Solicitud por copia</div>
+          <div class="section-sub">Referencias de usuario modelo por empresa.</div>
+        </div>
+
+        <div class="table-responsive border rounded mt-2">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Empresa</th>
+                <th>Copiar permisos de</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in copy_rows %}
+                <tr>
+                  <td class="fw-semibold">{{ row.company.name }}</td>
+                  <td>{{ row.model_user_reference }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="doc-hr"></div>
+      {% endif %}
+
       <!-- Por empresa -->
       <div class="mb-2">
         <div class="section-title">Detalle de accesos</div>
@@ -135,6 +167,9 @@
           <div>
             <h5 class="mb-1">{{ c.company.name }}</h5>
             <div class="doc-muted small">Permisos</div>
+            {% if c.model_user_reference %}
+              <div class="small mt-1"><span class="fw-semibold">Referencia usuario modelo:</span> {{ c.model_user_reference }}</div>
+            {% endif %}
           </div>
         </div>
 

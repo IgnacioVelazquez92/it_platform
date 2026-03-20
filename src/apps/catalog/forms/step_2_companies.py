@@ -16,12 +16,12 @@ class Step2CompaniesForm(BootstrapFormMixin, forms.Form):
     )
 
     branches = forms.ModelMultipleChoiceField(
-        label="Sucursales (opcional - se configuran en paso siguiente)",
+        label="Sucursales (opcional)",
         queryset=Branch.objects.filter(is_active=True).select_related(
             "company").order_by("company__name", "name"),
         required=False,
         widget=forms.CheckboxSelectMultiple,
-        help_text="Referencia visual. Las sucursales específicas se configuran en el Paso 5 (Alcances).",
+        help_text="Referencia visual. Si no seleccionas sucursales aqui, podes configurarlas despues en el Paso 5 (Alcances).",
     )
 
     same_modules_for_all = forms.ChoiceField(
@@ -36,16 +36,11 @@ class Step2CompaniesForm(BootstrapFormMixin, forms.Form):
     def clean(self):
         cleaned = super().clean()
         companies = cleaned.get("companies")
-        branches = cleaned.get("branches")
         same = cleaned.get("same_modules_for_all")
 
         if not companies or companies.count() == 0:
             raise ValidationError(
                 {"companies": "Seleccioná al menos una empresa."})
-
-        if not branches or branches.count() == 0:
-            raise ValidationError(
-                {"branches": "Seleccioná al menos una sucursal."})
 
         # Si hay más de 1 empresa, same_modules_for_all es requerido
         if companies.count() > 1 and same not in ("0", "1"):

@@ -1,4 +1,5 @@
 {% extends "base/base.html" %}
+{% load catalog_extras %}
 
 {% block content %}
 <div class="container py-4" style="max-width: 980px;">
@@ -6,9 +7,21 @@
 
   <div class="mb-3">
     <h3 class="mb-1">Empresas y sucursales</h3>
-    <div class="text-muted">
-      Elegí el alcance. Seleccioná empresas y luego sus sucursales correspondientes.
-    </div>
+    {% if is_model_user_mode %}
+      <div class="text-muted">
+        Elegí empresas y completa el usuario modelo en cada una para que IT copie esos accesos luego en ERP.
+      </div>
+    {% else %}
+      <div class="text-muted">
+        Elegí el alcance de empresas y sucursales para la solicitud.
+      </div>
+    {% endif %}
+    {% if is_model_user_mode %}
+      <div class="alert alert-info mt-2 mb-0 py-2">
+        <strong>Modo usuario modelo activo:</strong> en este modo debes completar un usuario modelo por cada empresa seleccionada.
+        Al continuar, vas directo a revision y envio.
+      </div>
+    {% endif %}
   </div>
 
   <form method="post" class="card shadow-sm">
@@ -51,10 +64,11 @@
         </div>
 
         <!-- Sucursales -->
+        {% if not is_model_user_mode %}
         <div class="col-12">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="fw-semibold">Sucursales</div>
-            <span class="text-muted small">Obligatorio</span>
+            <span class="text-muted small">Opcional</span>
           </div>
 
           {% if form.branches.errors %}
@@ -122,8 +136,42 @@
             <div class="text-muted small" id="summaryText">Seleccioná empresas para ver el resumen.</div>
           </div>
         </div>
+        {% endif %}
+
+        <!-- Usuario modelo por empresa -->
+        {% if is_model_user_mode %}
+        <div class="col-12">
+          <div class="p-3 border rounded">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="fw-semibold">Usuario modelo por empresa</div>
+              <span class="text-muted small">Obligatorio</span>
+            </div>
+            <div class="text-muted small mb-3">
+              Escribi el nombre o referencia del usuario modelo que IT debe copiar en ERP.
+            </div>
+
+            <div class="row g-3">
+              {% for block in company_blocks %}
+                {% with company_id=block.company.id|stringformat:"s" %}
+                <div class="col-12 clone-company-row" data-company-id="{{ block.company.id }}">
+                  <label class="form-label mb-1 fw-semibold">{{ block.company.name }}</label>
+                  <input
+                    type="text"
+                    class="form-control clone-user-input"
+                    name="clone_user_{{ block.company.id }}"
+                    placeholder="Nombre completo del usuario modelo"
+                    value="{{ clone_model_by_company|get_item:company_id }}"
+                  >
+                </div>
+                {% endwith %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
 
         <!-- Replicación (solo si > 1 empresa) -->
+        {% if is_blank_mode %}
         <div class="col-12" id="replicationBox" style="display:none;">
           <div class="p-3 border rounded bg-body-tertiary">
             <div class="fw-semibold mb-2">{{ form.same_modules_for_all.label }}</div>
@@ -155,6 +203,9 @@
             </div>
           </div>
         </div>
+        {% else %}
+          <input type="hidden" name="same_modules_for_all" value="1">
+        {% endif %}
         
       </div>
     </div>
@@ -171,6 +222,7 @@
   const companyChecks = Array.from(document.querySelectorAll(".company-checkbox"));
   const branchChecks  = () => Array.from(document.querySelectorAll(".branch-checkbox"));
   const replicationBox = document.getElementById("replicationBox");
+  const isModelUserMode = {{ is_model_user_mode|yesno:"true,false" }};
 
   const branchesAccordion = document.getElementById("branchesAccordion");
   const branchesEmptyState = document.getElementById("branchesEmptyState");
@@ -178,12 +230,14 @@
   const summaryText = document.getElementById("summaryText");
 
   const companyBlocks = Array.from(document.querySelectorAll(".branch-company"));
+  const cloneCompanyRows = Array.from(document.querySelectorAll(".clone-company-row"));
 
   function selectedCompanyIds() {
     return new Set(companyChecks.filter(c => c.checked).map(c => c.value));
   }
 
   function syncReplicationVisibility() {
+    if (isModelUserMode || !replicationBox) return;
     const selectedCount = companyChecks.filter(c => c.checked).length;
     replicationBox.style.display = (selectedCount > 1) ? "block" : "none";
 
@@ -194,6 +248,7 @@
   }
 
   function syncBranchesVisibility() {
+    if (isModelUserMode || !branchesAccordion || !branchesEmptyState) return;
     const selected = selectedCompanyIds();
 
     // Mostrar/ocultar accordion entero
@@ -222,22 +277,37 @@
     });
   }
 
+  function syncCloneInputsVisibility() {
+    const selected = selectedCompanyIds();
+
+    cloneCompanyRows.forEach(row => {
+      const id = row.getAttribute("data-company-id");
+      const visible = selected.has(id);
+      row.classList.toggle("d-none", !visible);
+      const input = row.querySelector(".clone-user-input");
+      if (input) {
+        input.disabled = !visible;
+      }
+    });
+  }
+
   function syncSummary() {
     const companies = companyChecks.filter(c => c.checked).length;
     const branches = branchChecks().filter(b => b.checked).length;
 
     if (companies === 0) {
       summaryText.textContent = "Seleccioná al menos una empresa.";
+      summaryText.classList.remove("text-danger");
       return;
     }
 
     if (branches === 0) {
-      summaryText.textContent = `Empresas: ${companies} · Tenés que elegir sucursales`;
-      summaryText.classList.add("text-danger");
+      summaryText.textContent = `Empresas: ${companies} · Sin sucursales especificas (se pueden definir en el Paso 5)`;
+      summaryText.classList.remove("text-danger");
       return;
-    } else {
-        summaryText.classList.remove("text-danger");
     }
+
+    summaryText.classList.remove("text-danger");
 
     summaryText.textContent = `Empresas: ${companies} · Sucursales seleccionadas: ${branches}`;
   }
@@ -245,14 +315,17 @@
   function syncAll() {
     syncReplicationVisibility();
     syncBranchesVisibility();
+    syncCloneInputsVisibility();
     syncSummary();
   }
 
   companyChecks.forEach(c => c.addEventListener("change", syncAll));
-  clearBranchesBtn.addEventListener("click", () => {
-    branchChecks().forEach(b => b.checked = false);
-    syncSummary();
-  });
+  if (clearBranchesBtn) {
+    clearBranchesBtn.addEventListener("click", () => {
+      branchChecks().forEach(b => b.checked = false);
+      syncSummary();
+    });
+  }
 
   // Primer render
   syncAll();

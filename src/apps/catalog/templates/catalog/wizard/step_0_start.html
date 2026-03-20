@@ -35,6 +35,10 @@
                   <div class="text-muted small">
                     Recomendado si ya existe uno o varios perfiles similares. Luego puedes ajustarlos en los pasos.
                   </div>
+                {% elif radio.data.value == "MODEL_USER" %}
+                  <div class="text-muted small">
+                    Carga solo datos personales y luego, en empresas, escribis un usuario modelo por empresa como referencia.
+                  </div>
                 {% else %}
                   <div class="text-muted small">
                     Ideal cuando el acceso es especial o no existe un perfil base.

@@ -20,6 +20,18 @@ from apps.catalog.models.selections import (
 )
 
 
+MODEL_USER_NOTE_PREFIX = "Usuario modelo ERP (texto libre):"
+
+
+def extract_model_user_reference(raw_note: str) -> str:
+    note = (raw_note or "").strip()
+    if not note:
+        return ""
+    if note.startswith(MODEL_USER_NOTE_PREFIX):
+        return note[len(MODEL_USER_NOTE_PREFIX):].strip()
+    return note
+
+
 class RequestDetailView(LoginRequiredMixin, DetailView):
     model = AccessRequest
     template_name = "catalog/request/detail.html"
@@ -213,15 +225,27 @@ class RequestDetailView(LoginRequiredMixin, DetailView):
             bucket["items"].append(it)
 
         companies = []
+        copy_rows: list[dict] = []
         for _, bucket in companies_map.items():
             base_ss = bucket["items"][0].selection_set
+            model_ref = extract_model_user_reference(base_ss.notes)
             companies.append({
                 "company": bucket["company"],
                 "payload": self._build_company_payload(base_ss, bucket["items"]),
+                "model_user_reference": model_ref,
             })
+            if model_ref:
+                copy_rows.append(
+                    {
+                        "company": bucket["company"],
+                        "model_user_reference": model_ref,
+                    }
+                )
 
         ctx["companies"] = companies
         ctx["items"] = items
+        ctx["copy_rows"] = copy_rows
+        ctx["is_copy_request"] = bool(copy_rows)
         return ctx
 
 
