@@ -8,6 +8,7 @@ from apps.catalog.models.requests import AccessRequest, RequestStatus
 
 
 MODEL_USER_NOTE_PREFIX = "Usuario modelo ERP (texto libre):"
+TEMPLATE_NOTE_PREFIX = "Templates usados:"
 
 
 def extract_model_user_reference(raw_note: str) -> str:
@@ -16,7 +17,15 @@ def extract_model_user_reference(raw_note: str) -> str:
         return ""
     if note.startswith(MODEL_USER_NOTE_PREFIX):
         return note[len(MODEL_USER_NOTE_PREFIX):].strip()
-    return note
+    return ""
+
+
+def extract_template_source(raw_notes: str) -> str:
+    for line in (raw_notes or "").splitlines():
+        note = line.strip()
+        if note.startswith(TEMPLATE_NOTE_PREFIX):
+            return note[len(TEMPLATE_NOTE_PREFIX):].strip()
+    return ""
 
 
 class RequestListView(LoginRequiredMixin, ListView):
@@ -69,6 +78,7 @@ class RequestListView(LoginRequiredMixin, ListView):
         ctx["status"] = (self.request.GET.get("status") or "").strip()
 
         for req in ctx["requests"]:
+            req.template_source = extract_template_source(req.notes)
             copy_summary: list[str] = []
             seen: set[str] = set()
             for item in req.items.all():

@@ -18,6 +18,9 @@ from apps.catalog.models.templates import AccessTemplate
 from .base import WizardBaseView
 
 
+TEMPLATE_NOTE_PREFIX = "Templates usados:"
+
+
 class WizardStep2CompaniesView(WizardBaseView):
     step = 2
     progress_percent = 40
@@ -93,6 +96,31 @@ class WizardStep2CompaniesView(WizardBaseView):
             if base_selection is not None:
                 selections.append(base_selection)
         return selections
+
+    def _build_template_note(self, wizard: dict) -> str:
+        template_ids = wizard.get("template_ids") or []
+        if not template_ids and wizard.get("template_id"):
+            template_ids = [wizard["template_id"]]
+        if not template_ids:
+            return ""
+
+        templates = {
+            template.id: template.name
+            for template in AccessTemplate.objects.filter(pk__in=template_ids, is_active=True)
+        }
+        ordered_names = [templates[template_id] for template_id in template_ids if template_id in templates]
+        if not ordered_names:
+            return ""
+
+        return f"{TEMPLATE_NOTE_PREFIX} {', '.join(ordered_names)}"
+
+    @staticmethod
+    def _merge_request_note(raw_notes: str, template_note: str) -> str:
+        lines = [(line or "").strip() for line in (raw_notes or "").splitlines()]
+        cleaned = [line for line in lines if line and not line.startswith(TEMPLATE_NOTE_PREFIX)]
+        if template_note:
+            cleaned.insert(0, template_note)
+        return "\n".join(cleaned).strip()
 
     def get(self, request):
         try:
@@ -171,7 +199,13 @@ class WizardStep2CompaniesView(WizardBaseView):
             )
 
         req.same_modules_for_all = same_modules_for_all
-        req.save(update_fields=["same_modules_for_all", "updated_at"])
+
+        template_note = ""
+        if start_mode == StartMode.TEMPLATE:
+            template_note = self._build_template_note(wizard)
+
+        req.notes = self._merge_request_note(req.notes, template_note)
+        req.save(update_fields=["same_modules_for_all", "notes", "updated_at"])
 
         old_selection_set_ids = list(req.items.values_list("selection_set_id", flat=True))
         req.items.all().delete()

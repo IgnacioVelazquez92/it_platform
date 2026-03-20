@@ -78,7 +78,9 @@
                 <td class="text-muted">{{ r.person_data.dni }}</td>
 
                 <td>
-                  {% if r.is_copy_request %}
+                  {% if r.template_source %}
+                    <span class="text-muted small">{{ r.template_source }}</span>
+                  {% elif r.is_copy_request %}
                     <div class="small">
                       {% for line in r.copy_summary %}
                         <div>{{ line }}</div>
