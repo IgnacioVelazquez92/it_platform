@@ -22,7 +22,7 @@ Los **templates de acceso** (`AccessTemplate`) representan perfiles reutilizable
 | Framework | Django 4.x |
 | DB (dev) | SQLite (`src/db.sqlite3`) |
 | DB (prod) | Configurable via env |
-| Frontend | Bootstrap 5, Bootstrap Icons, sin SPA (Django templates puro) |
+| Frontend | Bootstrap 5, Bootstrap Icons, Chart.js 4.4.0 (CDN), sin SPA (Django templates puro) |
 | Email (dev) | Console backend (cuando `USE_GMAIL_OAUTH=False`) |
 | Email (prod) | Google Gmail OAuth2 (`google-auth`, `google-api-python-client`) |
 | Auth | Django built-in (`AUTH_USER_MODEL` = `auth.User`) |
@@ -215,6 +215,7 @@ catalog:template_wizard_review    → templates/new/review/
 - **Wizard de creación directa de templates** (6 pasos) — completamente funcional
 - **Wizard de creación directa de templates** (4 pasos: start/modules/globals/review) — completamente funcional y sin selección de empresa/sucursal en UI
 - **Importación masiva de templates desde Excel**: disponible en Django admin de `AccessTemplate` y con management command `import_access_templates_excel`; procesa una solapa por template y puede reemplazar existentes.
+- **Dashboard con estadísticas** (`HomeDashboardView` en `core/views.py`): admin ven 4 KPIs (total, pendientes, aprobadas, rechazadas) + 2 gráficos Chart.js (barras por estado, doughnut por empresa top 10) + tabla últimas solicitudes; no-admin ven resumen y tabla sus solicitudes recientes.
 
 ### ⚠️ Pendiente / parcial
 
@@ -257,6 +258,8 @@ src/
         wizard/       # step_0_start.py(multiselect templates), step_2_companies.py(resolve/merge template_ids), step_3..6
         template_wizard/  # base.py(is_edit_mode, get_template_obj, ensure_single_base_item), step_0_start.py(prefill/create-update metadata), step_2_modules.py, step_3_globals.py, step_5_review.py(mensaje final create/update)
     core/
+      views.py        # HomeDashboardView: _get_admin_stats() (KPIs + gráficos estado/empresa), _get_user_stats() (solicitudes recientes)
+      urls.py         # ruta "" → HomeDashboardView
   config/settings/    # base, development, production
   templates/
     admin/catalog/accesstemplate/  # change_list.html (botón importar), import_excel.html (formulario de carga)

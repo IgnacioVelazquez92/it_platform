@@ -4,7 +4,270 @@
 
 {% block content %}
 <div class="container-fluid">
-  <h4 class="mb-2">Dashboard</h4>
-  <p class="text-muted mb-0">Bienvenido{% if user.is_authenticated %}, {{ user.get_username }}{% endif %}.</p>
+  <h4 class="mb-4">Dashboard</h4>
+
+  {% if user.is_staff %}
+    <!-- ADMIN VIEW -->
+    
+    <!-- Tarjetas KPI -->
+    <div class="row mb-4">
+      <div class="col-md-3 mb-3">
+        <div class="card bg-light border-left-primary">
+          <div class="card-body">
+            <h6 class="card-title text-muted mb-2">Total Solicitudes</h6>
+            <h2 class="card-text">{{ total_requests }}</h2>
+            <small class="text-muted">(Sin borrador)</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card bg-light border-left-info">
+          <div class="card-body">
+            <h6 class="card-title text-muted mb-2">Pendientes</h6>
+            <h2 class="card-text text-warning">{{ submitted_count }}</h2>
+            <small class="text-muted">Enviadas</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card bg-light border-left-success">
+          <div class="card-body">
+            <h6 class="card-title text-muted mb-2">Aprobadas</h6>
+            <h2 class="card-text text-success">{{ approved_count }}</h2>
+            <small class="text-muted">Completadas</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card bg-light border-left-danger">
+          <div class="card-body">
+            <h6 class="card-title text-muted mb-2">Rechazadas</h6>
+            <h2 class="card-text text-danger">{{ rejected_count }}</h2>
+            <small class="text-muted">No aprobadas</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row mb-4">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">Distribución por Estado</h6>
+          </div>
+          <div class="card-body">
+            <canvas id="statusChart" height="300"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">Top Empresas</h6>
+          </div>
+          <div class="card-body">
+            <canvas id="companyChart" height="300"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla últimas solicitudes -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">Últimas Solicitudes</h6>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Persona</th>
+                  <th>Usuario</th>
+                  <th>Tipo</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in recent_requests %}
+                <tr>
+                  <td>
+                    <a href="{% url 'catalog:request_detail' req.id %}">
+                      {{ req.person_data.full_name }}
+                    </a>
+                  </td>
+                  <td>{{ req.owner.username }}</td>
+                  <td><span class="badge bg-info">{{ req.get_kind_display }}</span></td>
+                  <td>
+                    {% if req.status == 'SUBMITTED' %}
+                      <span class="badge bg-warning">Pendiente</span>
+                    {% elif req.status == 'APPROVED' %}
+                      <span class="badge bg-success">Aprobada</span>
+                    {% else %}
+                      <span class="badge bg-danger">Rechazada</span>
+                    {% endif %}
+                  </td>
+                  <td><small>{{ req.created_at|date:"d/m/Y" }}</small></td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted py-3">No hay solicitudes enviadas</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script para Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+      // Gráfico: Estado
+      const statusCtx = document.getElementById('statusChart').getContext('2d');
+      new Chart(statusCtx, {
+        type: 'bar',
+        data: {
+          labels: {{ status_chart.labels }},
+          datasets: [{
+            label: 'Solicitudes',
+            data: {{ status_chart.data }},
+            backgroundColor: ['#ffc107', '#28a745', '#dc3545'],
+            borderColor: ['#e0a800', '#1e7e34', '#c82333'],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+
+      // Gráfico: Empresas
+      const companyCtx = document.getElementById('companyChart').getContext('2d');
+      new Chart(companyCtx, {
+        type: 'doughnut',
+        data: {
+          labels: {{ company_chart.labels }},
+          datasets: [{
+            data: {{ company_chart.data }},
+            backgroundColor: [
+              '#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8',
+              '#6c757d', '#e83e8c', '#fd7e14', '#6f42c1', '#20c997'
+            ],
+            borderColor: '#fff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    </script>
+
+  {% else %}
+    <!-- USER VIEW (No-admin) -->
+    
+    {% if user_total > 0 %}
+    <!-- Tarjetas resumen -->
+    <div class="row mb-4">
+      <div class="col-md-6 mb-3">
+        <div class="card bg-light">
+          <div class="card-body">
+            <h6 class="card-title text-muted mb-2">Mis Solicitudes</h6>
+            <h2 class="card-text">{{ user_total }}</h2>
+            <small class="text-muted">Total enviadas</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="card bg-light">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-6">
+                <h6 class="text-muted mb-1">Pendientes</h6>
+                <h3 class="text-warning mb-0">{{ user_submitted }}</h3>
+              </div>
+              <div class="col-6">
+                <h6 class="text-muted mb-1">Aprobadas</h6>
+                <h3 class="text-success mb-0">{{ user_approved }}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de solicitudes recientes -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-light">
+            <h6 class="card-title mb-0">Mis Solicitudes Recientes</h6>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Persona</th>
+                  <th>Tipo</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in user_requests %}
+                <tr>
+                  <td>{{ req.person_data.full_name }}</td>
+                  <td><span class="badge bg-info">{{ req.get_kind_display }}</span></td>
+                  <td>
+                    {% if req.status == 'SUBMITTED' %}
+                      <span class="badge bg-warning">Pendiente</span>
+                    {% elif req.status == 'APPROVED' %}
+                      <span class="badge bg-success">Aprobada</span>
+                    {% else %}
+                      <span class="badge bg-danger">Rechazada</span>
+                    {% endif %}
+                  </td>
+                  <td><small>{{ req.created_at|date:"d/m/Y" }}</small></td>
+                  <td>
+                    <a href="{% url 'catalog:request_detail' req.id %}" class="btn btn-sm btn-outline-primary">
+                      Ver
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info" role="alert">
+      <p class="mb-0">Aún no has creado ninguna solicitud de acceso.</p>
+      <a href="{% url 'catalog:wizard_step_0_start' %}" class="btn btn-sm btn-primary mt-2">
+        Nueva Solicitud
+      </a>
+    </div>
+    {% endif %}
+
+  {% endif %}
+
 </div>
 {% endblock %}
